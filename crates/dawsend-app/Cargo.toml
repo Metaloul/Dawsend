@@ -1,0 +1,18 @@
+[package]
+name = "dawsend-app"
+description = "Appli Dawsend : lit les sources publiées par les plugins et les joue sur une sortie système"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+dawsend-core.workspace = true
+cpal = "0.18"
+rtrb = "0.4"
+
+[[bin]]
+name = "dawsend-console"
+path = "src/bin/dawsend-console.rs"

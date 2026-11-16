@@ -57,8 +57,8 @@ Structurer le code pour que le backend audio et l'IPC soient isolés par platefo
 
 | Étape | État |
 |---|---|
-| 0. Architecture et format de la mémoire partagée | Proposée, **en attente de validation** |
-| 1. Prototype plugin + appli console | À faire |
+| 0. Architecture et format de la mémoire partagée | Validée le 16/11/2026 |
+| 1. Prototype plugin + appli console | Livrée le 16/11/2026, **à tester par Romain** ([procédure](TEST-ETAPE-1.md)) |
 | 2. Dérive d'horloge et latence | À faire |
 | 3. Plusieurs sources et mixage | À faire |
 | 4. Interface Tauri, barre des tâches, réglages | À faire |

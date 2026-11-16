@@ -1,7 +1,6 @@
 # Dawsend — Architecture (proposition v1)
 
-> Statut : **proposition, en attente de validation**. Aucun code n'est écrit tant que
-> les points de la section 9 « Décisions à valider » ne sont pas tranchés.
+> Statut : **validée le 16/11/2026** (voir § 9 pour les décisions prises).
 
 ## 1. Vue d'ensemble
 
@@ -81,7 +80,7 @@ Dawsend/
 
 `dawsend-app` contient une **bibliothèque** (le moteur) et plusieurs binaires : la
 console des étapes 1 à 3, puis l'appli Tauri à partir de l'étape 4. Le moteur
-ne connaît pas Tauri, ce qui permet de le tester sous Linux en CI sans interface.
+ne connaît pas Tauri, ce qui permet de le tester sous Linux sans interface.
 
 ## 3. Format de la mémoire partagée (v1)
 
@@ -257,7 +256,7 @@ Dans l'autre sens, le plugin affiche :
   « Dawsend 1 », « Dawsend 2 »… par défaut.
 - **Thread audio** : copie dans le ring, calcul de crête par canal vers des
   `AtomicF32` locaux (pour le vumètre), heartbeat. Aucune allocation, aucun
-  verrou, aucun appel système bloquant. Vérification en CI avec
+  verrou, aucun appel système bloquant. Vérification avec
   `assert_no_alloc` (fonctionnalité fournie par nih-plug) dans les builds de
   debug.
 - **`initialize()` / `Drop`** : seuls endroits qui ouvrent la zone et réservent ou
@@ -353,7 +352,7 @@ aussi la latence totale estimée.
 | Démarrage auto | plugin Tauri | registre `Run` | `~/.config/autostart` | LaunchAgent |
 
 Le moteur (`engine/`) et le format (`layout.rs`, `ring.rs`) n'ont aucun `#[cfg]`
-de plateforme. Ils sont donc testés sous Linux en CI dès l'étape 1, avec un
+de plateforme. Ils sont donc testés sous Linux dès l’étape 1, avec un
 test « deux processus » qui fait tourner un vrai producteur et un vrai
 consommateur sur la mémoire partagée.
 
@@ -386,7 +385,7 @@ combinée, qui doit être distribuée selon la GPLv3. Concrètement :
   désormais MIT) pourrait remplacer `vst3-sys`. Cela demanderait de patcher
   nih-plug : pas pour maintenant.
 
-Une vérification `cargo deny check licenses` en CI signalera toute dépendance
+Une vérification `cargo deny check licenses` (lancée à la main) signalera toute dépendance
 qui ajouterait une contrainte.
 
 Autre point : nih-plug n'est pas publié sur crates.io. On le référence par Git,
@@ -403,23 +402,18 @@ Autre point : nih-plug n'est pas publié sur crates.io. On le référence par Gi
 | **5. Empaquetage** | installeur (NSIS via Tauri) qui installe l'appli et copie `Dawsend.vst3` / `Dawsend.clap` dans `C:\Program Files\Common Files\VST3` et `…\CLAP` | Installation et désinstallation sur une machine propre. |
 | **6. Linux puis macOS** | backend PipeWire, puis CoreAudio, mémoire partagée Unix | — |
 
-**Comment tu récupères les builds Windows.** Je travaille dans un conteneur
-Linux : j'y compile et teste le cœur et le moteur, mais pas le son WASAPI ni
-Studio One. Je propose une **CI GitHub Actions** (`windows-latest`) qui produit à
-chaque push un zip téléchargeable : `Dawsend.vst3`, `Dawsend.clap` et
-`dawsend-console.exe`. Tu n'as alors pas besoin d'installer Rust. (Tu peux aussi
-compiler toi-même : `cargo xtask bundle dawsend-plugin --release`.)
+**Compilation.** Tu compiles directement sur ton PC Windows (pas de CI) :
+voir le README pour les commandes. De mon côté, je compile et teste le cœur et le
+moteur sous Linux, et je vérifie que tout compile pour la cible Windows
+(`cargo check --target x86_64-pc-windows-msvc`), mais je ne peux tester ni le son
+WASAPI ni Studio One : c'est ton rôle à chaque étape.
 
-## 9. Décisions à valider avant de coder
+## 9. Décisions prises (16/11/2026)
 
-1. **Licence du binaire VST3** : on accepte que le `.vst3` soit distribué sous
-   GPLv3 (le code restant MIT) ? Ou on livre **CLAP uniquement** ? Studio One
-   charge les CLAP dans ses versions récentes : à vérifier dans la tienne.
-   *Ma recommandation : VST3 + CLAP, avec la mention GPLv3 pour le VST3.*
-2. **2 canaux maximum par source** (mono ou stéréo). Un master surround serait
-   réduit en stéréo. *Recommandé.*
-3. **32 sources simultanées maximum, ring de 32 768 trames** (~8 Mio de mémoire
-   partagée). *Recommandé.*
-4. **Builds Windows via GitHub Actions** sur le dépôt `metaloul/dawsend` : OK ?
-5. **Interface du plugin en egui** (léger, sans dépendance web). *Recommandé.*
+1. **Formats** : VST3 **et** CLAP. Le binaire `.vst3` est distribué sous **GPLv3**
+   (à cause de `vst3-sys`), le code source reste sous MIT. Le `.clap` est MIT.
+2. **2 canaux maximum par source** (mono ou stéréo).
+3. **32 sources maximum**, ring de 32 768 trames (~8 Mio).
+4. **Pas de CI** : compilation en local sur le PC Windows de Romain.
+5. **Interface du plugin en egui** (`nih_plug_egui`).
 6. **Latence cible par défaut : 10 ms dans le ring** (~25 ms au total).

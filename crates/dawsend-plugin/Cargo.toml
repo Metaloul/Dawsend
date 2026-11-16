@@ -1,0 +1,16 @@
+[package]
+name = "dawsend-plugin"
+description = "Plugin Dawsend (VST3 + CLAP) : copie le son d'une piste vers l'appli Dawsend"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+dawsend-core.workspace = true
+nih_plug.workspace = true
