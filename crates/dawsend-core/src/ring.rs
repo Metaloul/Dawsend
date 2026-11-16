@@ -15,9 +15,14 @@ use crate::registry::SlotMeta;
 
 const MASK: u64 = RING_CAPACITY_FRAMES as u64 - 1;
 
+/// Taille max d'un bloc du DAW couverte par la marge de sécurité (les DAW plafonnent
+/// en pratique à 8 192 échantillons).
+pub const WRITER_MARGIN_FRAMES: u64 = 16_384;
+
 /// Fenêtre lisible sans risque : l'écrivain peut être en train d'écrire jusqu'à un bloc
-/// au-delà de `write_pos`, on garde donc la moitié du ring comme marge de sécurité.
-pub const READABLE_FRAMES: u64 = RING_CAPACITY_FRAMES as u64 / 2;
+/// au-delà de `write_pos`, on garde donc une marge d'un gros bloc.
+/// 49 152 trames = 1 s à 48 kHz, 256 ms à 192 kHz.
+pub const READABLE_FRAMES: u64 = RING_CAPACITY_FRAMES as u64 - WRITER_MARGIN_FRAMES;
 
 #[inline]
 fn sample_index(pos: u64, ch: usize) -> usize {

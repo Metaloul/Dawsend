@@ -197,11 +197,26 @@ fn play(args: &[String]) -> Result<(), String> {
                     stats: player.stats(),
                     source_rate: player.source_rate(),
                 };
+                let effective_ms = player.effective_latency_ms();
+                let anti_alias = player.has_anti_alias();
                 send(&mut control, Command::Add(Box::new(player)));
                 println!(
-                    "▶ Lecture de « {} » ({} Hz, {} canal(aux)) → {} Hz",
-                    c.name, c.source_rate, m.channels, info.sample_rate
+                    "▶ Lecture de « {} » ({} Hz, {} canal(aux)) → {} Hz{}",
+                    c.name,
+                    c.source_rate,
+                    m.channels,
+                    info.sample_rate,
+                    if anti_alias {
+                        " (filtre anti-repliement actif)"
+                    } else {
+                        ""
+                    }
                 );
+                if effective_ms + 0.05 < latency_ms {
+                    println!(
+                        "  Marge réduite à {effective_ms:.1} ms pour tenir dans le buffer à cette fréquence."
+                    );
+                }
                 current = Some(c);
                 waiting_msg_shown = false;
                 last = (0, 0);

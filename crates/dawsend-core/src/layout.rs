@@ -17,7 +17,8 @@ pub const SLOT_COUNT: usize = 32;
 pub const SLOT_HEADER_SIZE: usize = 256;
 pub const MAX_CHANNELS: usize = 2;
 /// Capacité d'un ring en trames. Puissance de 2 (le modulo devient un masque).
-pub const RING_CAPACITY_FRAMES: usize = 32_768;
+/// 65 536 trames = 1,36 s à 48 kHz, 341 ms à 192 kHz, 85 ms à 768 kHz.
+pub const RING_CAPACITY_FRAMES: usize = 65_536;
 pub const NAME_LEN: usize = 64;
 /// Début des données, aligné sur une page de 4 Kio.
 pub const DATA_OFFSET: usize = 12_288;
@@ -138,7 +139,7 @@ const _: () = {
     assert!(HEADER_SIZE + SLOT_COUNT * SLOT_HEADER_SIZE <= DATA_OFFSET);
     assert!(DATA_OFFSET % 4096 == 0);
     assert!(RING_CAPACITY_FRAMES.is_power_of_two());
-    assert!(TOTAL_SIZE == 8_400_896);
+    assert!(TOTAL_SIZE == 16_789_504);
 };
 
 /// Offset (en octets depuis le début de la zone) de l'en-tête du slot `index`.

@@ -5,6 +5,10 @@
 //! lentement jusqu'à un underrun ou un overrun, rattrapé proprement (fondu, silence).
 //! L'étape 2 remplacera ce module par rubato + régulateur de dérive.
 //!
+//! Hautes fréquences : quand la source est plus rapide que la sortie (96 ou 192 kHz →
+//! 48 kHz…), un filtre passe-bas Butterworth d'ordre 8 à 0,45 × la fréquence de sortie
+//! est appliqué avant l'interpolation pour éviter le repliement (aliasing).
+//!
 //! Tout ce qui est appelé depuis `render` est temps réel : pas d'allocation, pas de verrou.
 
 use std::sync::Arc;
@@ -22,6 +26,53 @@ const MAX_STEP: f64 = 128.0;
 const FADE_MS: f64 = 5.0;
 /// Au-delà de cible + ça, on considère qu'on a pris trop de retard et on resynchronise.
 const MAX_EXCESS_MS: f64 = 40.0;
+/// Fréquence de coupure de l'anti-repliement, en fraction de la fréquence de sortie.
+const ANTI_ALIAS_CUTOFF: f64 = 0.45;
+/// Facteurs de qualité des 4 cellules d'un Butterworth d'ordre 8.
+const BUTTERWORTH_8_Q: [f64; 4] = [0.509_795_6, 0.601_344_9, 0.899_976_2, 2.562_915_4];
+
+/// Cellule passe-bas du second ordre (forme directe II transposée, en f64).
+#[derive(Clone, Copy, Default)]
+struct Biquad {
+    b0: f64,
+    b1: f64,
+    b2: f64,
+    a1: f64,
+    a2: f64,
+    z1: [f64; 2],
+    z2: [f64; 2],
+}
+
+impl Biquad {
+    fn lowpass(cutoff: f64, rate: f64, q: f64) -> Self {
+        let w0 = std::f64::consts::TAU * cutoff / rate;
+        let (sin, cos) = w0.sin_cos();
+        let alpha = sin / (2.0 * q);
+        let a0 = 1.0 + alpha;
+        let b1 = (1.0 - cos) / a0;
+        Self {
+            b0: b1 / 2.0,
+            b1,
+            b2: b1 / 2.0,
+            a1: -2.0 * cos / a0,
+            a2: (1.0 - alpha) / a0,
+            ..Self::default()
+        }
+    }
+
+    #[inline]
+    fn process(&mut self, ch: usize, x: f64) -> f64 {
+        let y = self.b0 * x + self.z1[ch];
+        self.z1[ch] = self.b1 * x - self.a1 * y + self.z2[ch];
+        self.z2[ch] = self.b2 * x - self.a2 * y;
+        y
+    }
+
+    fn reset(&mut self) {
+        self.z1 = [0.0; 2];
+        self.z2 = [0.0; 2];
+    }
+}
 
 /// Statistiques lisibles depuis le thread de contrôle.
 #[derive(Default)]
@@ -60,6 +111,8 @@ pub struct SourcePlayer {
     fade_inc: f32,
     /// Dernier échantillon émis, prolongé en fondu vers zéro quand les données manquent.
     tail: [f32; 2],
+    /// Anti-repliement, seulement si la source est plus rapide que la sortie.
+    anti_alias: Option<[Biquad; 4]>,
 }
 
 impl SourcePlayer {
@@ -73,6 +126,17 @@ impl SourcePlayer {
         };
         let scratch_frames = (CHUNK_FRAMES as f64 * step).ceil() as usize + 2;
         let fade_len = (f64::from(output_rate) * FADE_MS / 1000.0).max(1.0);
+        let max_excess_frames = (src_rate * MAX_EXCESS_MS / 1000.0) as u64;
+        // La marge visée doit tenir dans la fenêtre lisible du ring, avec la lecture d'un
+        // morceau et la tolérance de retard (ne compte qu'aux fréquences extrêmes).
+        let max_target = READABLE_FRAMES
+            .saturating_sub(scratch_frames as u64 + max_excess_frames)
+            .saturating_sub(READABLE_FRAMES / 8);
+        let target_frames = ((src_rate * latency_ms / 1000.0) as u64).min(max_target);
+        let anti_alias = (step > 1.0).then(|| {
+            let cutoff = ANTI_ALIAS_CUTOFF * f64::from(output_rate);
+            BUTTERWORTH_8_Q.map(|q| Biquad::lowpass(cutoff, src_rate, q))
+        });
         Self {
             consumer,
             key,
@@ -82,14 +146,26 @@ impl SourcePlayer {
             prev: [0.0; 2],
             cur: [0.0; 2],
             scratch: vec![0.0; scratch_frames * 2],
-            target_frames: (src_rate * latency_ms / 1000.0) as u64,
-            max_excess_frames: (src_rate * MAX_EXCESS_MS / 1000.0) as u64,
+            target_frames,
+            max_excess_frames,
             playing: false,
             stale: false,
             gain: 0.0,
             fade_inc: (1.0 / fade_len) as f32,
             tail: [0.0; 2],
+            anti_alias,
         }
+    }
+
+    /// Marge réellement visée, en ms (peut être inférieure à celle demandée aux
+    /// fréquences extrêmes, pour tenir dans le ring).
+    pub fn effective_latency_ms(&self) -> f64 {
+        self.target_frames as f64 * 1000.0 / f64::from(self.consumer.sample_rate())
+    }
+
+    /// `true` si un filtre anti-repliement est appliqué.
+    pub fn has_anti_alias(&self) -> bool {
+        self.anti_alias.is_some()
     }
 
     pub fn key(&self) -> SourceKey {
@@ -138,6 +214,9 @@ impl SourcePlayer {
                 self.t = 0.0;
                 self.prev = [0.0; 2];
                 self.cur = [0.0; 2];
+                if let Some(f) = &mut self.anti_alias {
+                    f.iter_mut().for_each(Biquad::reset);
+                }
                 self.stats.playing.store(1, Ordering::Relaxed);
             } else {
                 if available > READABLE_FRAMES {
@@ -182,6 +261,18 @@ impl SourcePlayer {
             self.consumer.available().min(READABLE_FRAMES),
             Ordering::Relaxed,
         );
+
+        if let Some(filters) = &mut self.anti_alias {
+            for frame in self.scratch[..need * 2].chunks_exact_mut(2) {
+                for (ch, v) in frame.iter_mut().enumerate() {
+                    let mut x = f64::from(*v);
+                    for f in filters.iter_mut() {
+                        x = f.process(ch, x);
+                    }
+                    *v = x as f32;
+                }
+            }
+        }
 
         let mut idx = 0;
         for o in out.chunks_exact_mut(2) {
@@ -313,6 +404,84 @@ mod tests {
             .map(|(a, b)| (a[0] - b[0]).abs())
             .fold(0.0f32, f32::max);
         assert!(max_jump < 0.05, "saut {max_jump}");
+    }
+
+    /// Joue une sinusoïde de `freq` Hz publiée à `src_rate` sur une sortie à `out_rate`,
+    /// horloges identiques. Renvoie (crête de sortie, underruns, resynchros).
+    fn play_tone(name: &str, src_rate: u32, out_rate: u32, freq: f32) -> (f32, u64, u64) {
+        let (_s, region, claim) = setup(name, src_rate);
+        let prod = claim.producer();
+        let meta = read_meta(&region, claim.index()).unwrap();
+        let mut p = SourcePlayer::new(Consumer::new(region.clone(), &meta), out_rate, 10.0);
+        let period = (out_rate / 100) as usize; // 10 ms
+        let mut out = vec![0.0; period * 2];
+        let mut written = 0usize;
+        let mut peak = 0.0f32;
+        for i in 0..300 {
+            let target_src = (i + 1) * src_rate as usize / 100 + src_rate as usize / 50;
+            while written < target_src {
+                let b: Vec<f32> = (written..written + 256)
+                    .map(|k| {
+                        let cycles = (k as f64 * f64::from(freq) / f64::from(src_rate)).fract();
+                        ((cycles * std::f64::consts::TAU).sin() * 0.5) as f32
+                    })
+                    .collect();
+                prod.write_planar(&[b.clone(), b]);
+                written += 256;
+            }
+            out.fill(0.0);
+            p.render_add(&mut out, period);
+            if i > 100 {
+                peak = out.iter().fold(peak, |m, v| m.max(v.abs()));
+            }
+        }
+        let st = p.stats();
+        (
+            peak,
+            st.underruns.load(Ordering::Relaxed),
+            st.overruns.load(Ordering::Relaxed),
+        )
+    }
+
+    #[test]
+    fn high_sample_rates() {
+        for (i, (src, out)) in [
+            (96_000, 48_000),
+            (192_000, 48_000),
+            (88_200, 44_100),
+            (176_400, 48_000),
+            (384_000, 48_000),
+            (48_000, 96_000),
+            (48_000, 192_000),
+            (192_000, 192_000),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let (peak, under, over) = play_tone(&format!("hr{i}"), src, out, 1000.0);
+            assert_eq!((under, over), (0, 0), "{src} → {out}");
+            assert!(
+                (0.45..=0.51).contains(&peak),
+                "{src} → {out} : crête {peak}"
+            );
+        }
+    }
+
+    #[test]
+    fn ultrasonic_content_is_not_folded_back() {
+        // 40 kHz à 192 kHz se replierait sur 8 kHz à 48 kHz sans filtre.
+        let (peak, under, over) = play_tone("alias", 192_000, 48_000, 40_000.0);
+        assert_eq!((under, over), (0, 0));
+        assert!(peak < 0.01, "repliement audible : crête {peak}");
+    }
+
+    #[test]
+    fn latency_is_clamped_at_extreme_rates() {
+        let (_s, region, claim) = setup("clamp", 768_000);
+        let meta = read_meta(&region, claim.index()).unwrap();
+        let p = SourcePlayer::new(Consumer::new(region.clone(), &meta), 48_000, 200.0);
+        assert!(p.effective_latency_ms() < 200.0);
+        assert!(p.has_anti_alias());
     }
 
     #[test]

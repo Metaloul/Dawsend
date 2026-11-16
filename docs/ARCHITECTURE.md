@@ -100,7 +100,7 @@ ne connaît pas Tauri, ce qui permet de le tester sous Linux sans interface.
   ferme : il n'y a rien à nettoyer.
 - Sous Unix, l'objet persiste après la fermeture. Le format le supporte sans
   problème, car les slots orphelins sont repérés par leur PID (§ 3.5).
-- **Taille totale : 8 400 896 octets (~8 Mio).** La mémoire n'est réellement
+- **Taille totale : 16 789 504 octets (~16 Mio).** La mémoire n'est réellement
   allouée qu'au premier accès, donc au premier slot utilisé.
 
 ### 3.2 Plan mémoire
@@ -114,7 +114,7 @@ les offsets de chaque structure sont vérifiés à la compilation
 offset 0        En-tête global ............................... 256 o
 offset 256      Table des slots : 32 × 256 o ................. 8 192 o
 offset 8 448    (bourrage jusqu'à l'alignement sur une page)
-offset 12 288   Données : 32 rings × 32 768 trames × 2 canaux × 4 o = 32 × 256 Kio
+offset 12 288   Données : 32 rings × 65 536 trames × 2 canaux × 4 o = 32 × 512 Kio
 ```
 
 #### En-tête global (256 octets)
@@ -128,10 +128,10 @@ offset 12 288   Données : 32 rings × 32 768 trames × 2 canaux × 4 o = 32 × 
 | 20 | `u32` | `slot_count` | 32 |
 | 24 | `u32` | `slot_header_size` | 256 |
 | 28 | `u32` | `max_channels` | 2 |
-| 32 | `u32` | `ring_capacity_frames` | 32 768 (puissance de 2) |
+| 32 | `u32` | `ring_capacity_frames` | 65 536 (puissance de 2) |
 | 36 | `u32` | — | réservé |
 | 40 | `u64` | `data_offset` | 12 288 |
-| 48 | `u64` | `total_size` | 8 400 896 |
+| 48 | `u64` | `total_size` | 16 789 504 |
 | 56–63 | | — | réservé |
 | **64** | `AtomicU32` | `app_pid` | PID de l'appli, 0 si absente *(ligne de cache de l'appli)* |
 | 68 | `AtomicU32` | `app_flags` | bit 0 : lecture active |
@@ -185,9 +185,16 @@ et reste formellement correct dans le modèle mémoire de Rust malgré la lectur
 concurrente. Pour une source mono, seul le canal 0 est écrit, et l'appli le
 duplique sur la sortie stéréo.
 
-**Capacité : 32 768 trames**, soit 680 ms à 48 kHz et 170 ms à 192 kHz. C'est
-largement au-dessus de la latence visée (20 à 30 ms), et ça encaisse un DAW
-réglé avec un très gros buffer ASIO (2 048 échantillons).
+**Capacité : 65 536 trames**, soit 1,36 s à 48 kHz, 341 ms à 192 kHz et 85 ms
+à 768 kHz. Le lecteur s'interdit les 16 384 dernières trames (marge pour le bloc
+que le plugin peut être en train d'écrire) : il reste 1 s lisible à 48 kHz et
+256 ms à 192 kHz, largement au-dessus de la latence visée, même avec un très gros
+buffer ASIO.
+
+**Fréquences prises en charge** : de 8 kHz à 768 kHz côté DAW comme côté sortie
+Windows (44,1 / 48 / 88,2 / 96 / 176,4 / 192 kHz…), dans n'importe quelle
+combinaison. Quand la source est plus rapide que la sortie, un filtre
+anti-repliement est appliqué avant le rééchantillonnage.
 
 ### 3.3 Protocole d'écriture (thread audio du plugin)
 
@@ -413,7 +420,8 @@ WASAPI ni Studio One : c'est ton rôle à chaque étape.
 1. **Formats** : VST3 **et** CLAP. Le binaire `.vst3` est distribué sous **GPLv3**
    (à cause de `vst3-sys`), le code source reste sous MIT. Le `.clap` est MIT.
 2. **2 canaux maximum par source** (mono ou stéréo).
-3. **32 sources maximum**, ring de 32 768 trames (~8 Mio).
+3. **32 sources maximum**, ring de 65 536 trames (~16 Mio ; porté de 32 768 à
+   65 536 le 16/11/2026 pour les hautes fréquences).
 4. **Pas de CI** : compilation en local sur le PC Windows de Romain.
 5. **Interface du plugin en egui** (`nih_plug_egui`).
 6. **Latence cible par défaut : 10 ms dans le ring** (~25 ms au total).
