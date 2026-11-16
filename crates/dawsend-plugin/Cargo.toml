@@ -14,3 +14,8 @@ crate-type = ["cdylib", "lib"]
 [dependencies]
 dawsend-core.workspace = true
 nih_plug.workspace = true
+
+# En debug, nih-plug fait planter le plugin si `process()` alloue de la mémoire.
+# Cette vérification ne fonctionne pas avec la cible Windows mingw (compilation croisée).
+[target.'cfg(not(all(windows, target_env = "gnu")))'.dependencies]
+nih_plug = { workspace = true, features = ["assert_process_allocs"] }

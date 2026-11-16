@@ -47,7 +47,25 @@ fn main() {
     };
     if let Err(e) = result {
         eprintln!("Erreur : {e}");
+        pause_if_own_window();
         std::process::exit(1);
+    }
+}
+
+/// Lancée depuis un raccourci, la console a sa propre fenêtre qui se fermerait aussitôt :
+/// on attend Entrée pour laisser le temps de lire le message.
+fn pause_if_own_window() {
+    #[cfg(windows)]
+    {
+        let mut pids = [0u32; 4];
+        // SAFETY : écrit au plus 4 PID dans le tableau local.
+        let n = unsafe {
+            windows_sys::Win32::System::Console::GetConsoleProcessList(pids.as_mut_ptr(), 4)
+        };
+        if n == 1 {
+            eprintln!("\nAppuie sur Entrée pour fermer.");
+            let _ = std::io::stdin().read_line(&mut String::new());
+        }
     }
 }
 

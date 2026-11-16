@@ -62,5 +62,5 @@ Structurer le code pour que le backend audio et l'IPC soient isolés par platefo
 | 2. Dérive d'horloge et latence | À faire |
 | 3. Plusieurs sources et mixage | À faire |
 | 4. Interface Tauri, barre des tâches, réglages | À faire |
-| 5. Empaquetage Windows | À faire |
+| 5. Empaquetage Windows | Installateur NSIS avancé dès l'étape 1 (16/11/2026), à compléter à l'étape 4 |
 | 6. Linux, puis macOS | À faire |

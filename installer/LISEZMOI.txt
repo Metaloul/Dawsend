@@ -1,0 +1,68 @@
+DAWSEND — mode d'emploi
+=======================
+
+Dawsend envoie le son de ton DAW (ASIO) vers une sortie Windows normale, pour que
+le partage d'écran (Discord, etc.) l'entende, sans OBS ni câble audio virtuel.
+
+Version prototype (étape 1) : l'appli est une fenêtre de console et joue une seule
+source à la fois.
+
+
+1. DANS STUDIO ONE
+------------------
+- Ajoute « Dawsend » (catégorie Fx / Tools) en insert sur ta piste guitare, en
+  dernier dans la chaîne si tu veux envoyer le son traité. Le son de la piste
+  n'est pas modifié.
+- S'il n'apparaît pas : Studio One > Options > Emplacements > Plug-ins VST,
+  réinitialise la liste noire puis relance Studio One.
+- Les sources s'appellent « Dawsend 1 », « Dawsend 2 »… dans l'ordre d'ajout. Le nom
+  est sauvegardé avec le projet.
+
+
+2. LANCER DAWSEND
+-----------------
+Menu Démarrer > Dawsend > « Dawsend ». La fenêtre affiche la source jouée puis,
+chaque seconde, le remplissage du buffer et les compteurs d'incidents.
+Ferme la fenêtre (ou Ctrl+C) pour arrêter.
+
+Autres raccourcis :
+- « Dawsend - liste des sources » : affiche les sources publiées par les plugins.
+- « Dawsend - bip de test » : publie un bip, pour tester sans DAW (lance-le, puis
+  lance « Dawsend » : tu dois entendre un bip toutes les secondes).
+
+Options avancées (dans un terminal, dossier C:\Program Files\Dawsend) :
+  dawsend-console play --source "Dawsend 2"     joue une source précise
+  dawsend-console play --device "Haut-parleurs" choisit la sortie (partie du nom)
+  dawsend-console play --latency 20             marge du buffer en ms (10 par défaut)
+  dawsend-console devices                       liste les sorties audio
+
+
+3. DISCORD
+----------
+Partage l'ÉCRAN ENTIER avec le son. En partageant seulement la fenêtre de Studio One,
+Discord ne capte que le son de Studio One, et pas celui de Dawsend.
+
+
+4. FRÉQUENCES
+-------------
+Toutes les fréquences sont prises en charge (44,1 / 48 / 88,2 / 96 / 176,4 / 192 kHz
+et au-delà), côté DAW comme côté Windows, dans n'importe quelle combinaison.
+
+
+5. DÉPANNAGE
+------------
+- Aucune source : le plugin doit être sur une piste active, moteur audio démarré.
+- Source « en pause » : Studio One ne fait pas tourner le plugin (piste désactivée,
+  moteur audio arrêté).
+- Guitare entendue en double avec un petit écho : le son ASIO et la sortie Windows
+  arrivent dans le même casque. Choisis une autre sortie avec --device.
+- Craquements, underruns qui augmentent : augmente la marge (--latency 20). Elle doit
+  dépasser la taille du buffer ASIO (1 024 échantillons à 48 kHz = 21 ms).
+- Petite coupure toutes les quelques minutes : dérive d'horloge entre la carte ASIO
+  et Windows, normal dans ce prototype (corrigé à l'étape suivante).
+- « mémoire partagée incompatible » : le plugin et l'appli ne sont pas de la même
+  version. Réinstalle, puis relance Studio One.
+
+
+Code source sous licence MIT (LICENSE.txt). Le plugin VST3 est distribué sous GPLv3
+(GPL-3.0.txt), voir LICENCES.txt. Copyright Romain Rousseau (Metaloul).

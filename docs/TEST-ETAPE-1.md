@@ -4,11 +4,14 @@ But : vérifier que le son d'une piste de Studio One arrive sur une sortie Windo
 normale, entendue par le partage d'écran, et que rien ne plante quel que soit
 l'ordre de démarrage.
 
-Compilation et installation : voir le [README](../README.md).
+Installation : lance `Dawsend-Setup-0.1.0.exe` (voir le [README](../README.md)).
+
+**Nouveau :** prise en charge des hautes fréquences (96, 192 kHz…), avec un filtre
+anti-repliement quand le projet est plus rapide que la sortie Windows.
 
 ## Ce que j'ai déjà vérifié de mon côté (Linux, sans carte son)
 
-- 20 tests automatiques. Ils couvrent le format de la mémoire partagée, la réservation
+- 23 tests automatiques. Ils couvrent le format de la mémoire partagée, la réservation
   et la libération des emplacements, l'écriture et la lecture concurrentes sur deux
   mappings, la détection des processus morts, le rééchantillonnage 44,1 → 48 kHz et
   les underruns.
@@ -21,6 +24,16 @@ Compilation et installation : voir le [README](../README.md).
 - Une lecture de 10 s entre deux processus, avec une sortie simulée cadencée à 48 kHz :
   aucun underrun, à 48 kHz comme en 44,1 kHz.
 - Tout le workspace compile pour Windows (`x86_64-pc-windows-msvc`).
+- Hautes fréquences : 8 combinaisons testées, de 44,1 à 384 kHz et dans les deux sens.
+  Aucun underrun, niveau conservé, et un 40 kHz ultrasonique n'est pas replié dans
+  l'audible. Une lecture réelle de 6 s à 96 et à 192 kHz passe sans incident.
+- **Installateur, testé sous Wine** (Windows simulé sous Linux) :
+  - l'installation silencieuse place les fichiers, les plugins, les raccourcis et la
+    clé de désinstallation ;
+  - `dawsend-console.exe` voit une source publiée par un autre processus Windows ;
+  - le `Dawsend.clap` **Windows installé**, chargé dans un hôte, laisse passer le son
+    à l'identique et copie exactement l'audio dans la mémoire partagée ;
+  - la désinstallation enlève tout.
 
 Ce que je **ne peux pas** tester : WASAPI, Studio One, Discord. C'est ton rôle.
 
@@ -49,6 +62,8 @@ Coche au fur et à mesure et note ce qui cloche.
 5. Est-ce que tu entends la guitare en double (avec un petit écho) dans ton casque ?
    Dis-moi comment tes sorties sont branchées : interface ASIO, sortie Windows par
    défaut, casque…
+6. Hautes fréquences : passe le projet à 96 kHz puis 192 kHz → le son reste propre,
+   et la console indique « filtre anti-repliement actif » si Windows est à 48 kHz.
 
 ### C. Robustesse
 

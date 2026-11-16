@@ -14,7 +14,32 @@ le partage d'écran (Discord, etc.) l'entende, sans OBS ni câble audio virtuel.
 > [le cahier des charges](docs/CAHIER_DES_CHARGES.md) et
 > [l'architecture](docs/ARCHITECTURE.md).
 
-## Compiler sous Windows
+## Installation (le plus simple)
+
+Lance **`Dawsend-Setup-0.1.0.exe`**. Il installe :
+
+- le plugin **VST3** dans `C:\Program Files\Common Files\VST3` ;
+- le plugin **CLAP** dans `C:\Program Files\Common Files\CLAP` ;
+- l'appli dans `C:\Program Files\Dawsend`, avec ses raccourcis dans le menu Démarrer
+  (« Dawsend », « liste des sources », « bip de test », mode d'emploi, désinstallation) ;
+- en option : un raccourci sur le bureau et le lancement au démarrage de Windows.
+
+Ferme Studio One avant d'installer ou de mettre à jour. L'installateur n'est pas signé :
+si Windows affiche « Windows a protégé votre ordinateur », clique sur *Informations
+complémentaires* puis *Exécuter quand même*. On désinstalle depuis *Paramètres ›
+Applications* ou depuis le menu Démarrer.
+
+### Construire l'installateur
+
+- **Sous Linux** (c'est ainsi qu'est produit l'installateur fourni) :
+  `sudo apt install mingw-w64 nsis`, `rustup target add x86_64-pc-windows-gnu`, puis
+  `installer/build.sh`.
+- **Sous Windows** : installe en plus [NSIS 3](https://nsis.sourceforge.io), puis
+  `powershell -ExecutionPolicy Bypass -File installer\build.ps1`.
+
+Résultat : `target/installer/Dawsend-Setup-<version>.exe`.
+
+## Compiler sous Windows (sans installateur)
 
 ### Prérequis (une seule fois)
 
@@ -80,6 +105,14 @@ plugin en cours d'utilisation.
 | `dawsend-console list` | liste les sources publiées par les plugins |
 | `dawsend-console devices` | liste les sorties audio |
 | `dawsend-console sine` | publie un bip de test, comme le ferait un plugin (pour tester sans DAW) |
+| `dawsend-console sine --rate 192000` | idem, à une autre fréquence |
+
+### Fréquences d'échantillonnage
+
+Toutes les fréquences de 8 kHz à 768 kHz sont prises en charge (44,1, 48, 88,2, 96,
+176,4, 192 kHz…), côté DAW comme côté Windows, dans n'importe quelle combinaison.
+Quand le projet tourne plus vite que la sortie Windows (par exemple 192 kHz → 48 kHz),
+un filtre anti-repliement est appliqué, et la console l'indique.
 
 À l'étape 1, chaque plugin s'appelle « Dawsend 1 », « Dawsend 2 »… selon l'ordre
 d'ajout. Le nom est sauvegardé avec le projet. Le renommage depuis l'interface du

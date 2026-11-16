@@ -319,6 +319,7 @@ dependencies = [
  "cpal",
  "dawsend-core",
  "rtrb",
+ "windows-sys",
 ]
 
 [[package]]
