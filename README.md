@@ -358,8 +358,9 @@ Testing without a DAW: `dawsend-console sine --name Guitar`, then the app.
 1. Bump the version in `Cargo.toml` (`[workspace.package]`).
 2. Add its `## X.Y.Z` section at the top of [CHANGELOG.md](CHANGELOG.md), written for
    users: it becomes the release notes and the text of the update banner.
-3. Push the `vX.Y.Z` tag. The [Release](.github/workflows/release.yml) workflow tests,
-   builds the installer and the portable zip, signs the installer, writes `latest.json`
+3. Wait for CI to pass on `main`, then push the `vX.Y.Z` tag. The
+   [Release](.github/workflows/release.yml) workflow reuses that CI result (or runs the
+   tests itself), builds the installer and the portable zip, signs the installer, writes `latest.json`
    and `SHA256SUMS.txt`, publishes the release and has it scanned by VirusTotal.
 
 Repository secrets: `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`

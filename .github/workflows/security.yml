@@ -1,12 +1,21 @@
 # Analyses de sécurité : failles connues des dépendances (RustSec, npm), licences et
 # provenance des crates (cargo-deny), analyse statique du code (CodeQL).
 # À chaque push sur main, à chaque pull request et chaque lundi (nouvelles failles).
+# Pas pour un commit qui ne touche que la doc ; l'analyse du lundi tourne toujours.
 name: Sécurité
 
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSES/**"
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSES/**"
   schedule:
     - cron: "17 5 * * 1"
   workflow_dispatch:

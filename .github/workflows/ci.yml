@@ -1,11 +1,19 @@
 # Vérifications à chaque push sur main et à chaque pull request : format, clippy sans
-# avertissement, tests, interface.
+# avertissement, tests, interface. Rien pour un commit qui ne touche que la doc.
 name: CI
 
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSES/**"
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSES/**"
   workflow_dispatch:
 
 permissions:
@@ -24,7 +32,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      # Seul main enregistre le cache ; les PR le lisent sans en créer un à usage unique.
       - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: pnpm/action-setup@v6
         with:
           version: 10

@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: release
@@ -42,7 +43,11 @@ jobs:
           "version=$v" >> $env:GITHUB_OUTPUT
 
       - uses: dtolnay/rust-toolchain@stable
+      # Lit le cache de main. N'en enregistre pas : un cache créé sur un tag n'est
+      # lisible par aucun autre tag, il ne servirait jamais.
       - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: false
       - uses: pnpm/action-setup@v6
         with:
           version: 10
@@ -63,7 +68,20 @@ jobs:
           pnpm --dir ui install --frozen-lockfile
           pnpm --dir ui build
 
+      # La CI a déjà testé ce commit : pas besoin de tout recompiler en debug. Sinon
+      # (CI pas finie, ou commit de doc qu'elle a sauté), on teste ici.
+      - name: CI de ce commit
+        id: ci
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $n = gh api "repos/$env:GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$env:GITHUB_SHA&status=success" --jq '.total_count'
+          if ([int]$n -gt 0) { "La CI a validé $env:GITHUB_SHA : tests sautés." } else { "Pas de CI réussie pour $env:GITHUB_SHA : tests lancés ici." }
+          "passed=$([int]$n -gt 0)".ToLower() >> $env:GITHUB_OUTPUT
+
       - name: Tests
+        if: steps.ci.outputs.passed != 'true'
         run: cargo test --workspace --locked
 
       - name: Installateur

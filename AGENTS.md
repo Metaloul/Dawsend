@@ -188,6 +188,14 @@ Familjen Grotesk et Geist Mono). La maquette de référence est dans Figma (fich
    publie la release et envoie l'installateur et le zip à VirusTotal si `VT_API_KEY`
    est configuré.
 
+Pour gagner du temps, attendre que la CI de `main` soit verte avant de pousser le tag :
+la release saute alors ses tests (étape « CI de ce commit »), sinon elle les relance.
+
+**CI** : `ci.yml` et `security.yml` ne tournent pas pour un commit qui ne touche que
+`*.md`, `docs/` ou `LICENSES/`. Seul `main` enregistre le cache Rust (les PR le
+lisent), la release n'en enregistre pas. Dependabot groupe ses mises à jour par
+écosystème (cargo, npm, actions) : une PR de chaque par semaine au plus.
+
 L'appli lit `https://github.com/Metaloul/Dawsend/releases/latest/download/latest.json`
 (clés de plateforme `windows-x86_64` et `windows-x86_64-nsis`). Elle installe en
 mode silencieux : l'installateur reçoit `/S /UPDATE`, garde les choix précédents
