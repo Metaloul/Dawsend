@@ -37,9 +37,16 @@ pour que le partage d'écran (Discord) l'entende. Il se compose d'un plugin nih-
   (`Metaloul/Dawsend`), clé publique dans `crates/dawsend-gui/updater-key.pub`, clé
   privée hors dépôt (`C:\Users\Administrator\.tauri\dawsend.key`, secrets GitHub).
   Publication : tag `vX.Y.Z` → `.github/workflows/release.yml` (section du
-  `CHANGELOG.md` obligatoire). Pas encore testées de bout en bout (aucune release).
-- Sécurité : `deny.toml`, workflows `security.yml` (cargo-deny, cargo-audit, pnpm
-  audit, CodeQL) et `scorecard.yml`, résultats dans `docs/SECURITE.md`.
+  `CHANGELOG.md` obligatoire ; lancement à la main avec `publier=false` = release à
+  blanc). Releases **v0.1.0** et **v0.1.1** publiées (installateur, zip portable,
+  provenance SLSA, verdict VirusTotal). Mise à jour 0.1.0 → 0.1.1 pas encore vérifiée
+  sur un poste.
+- Sécurité : `deny.toml`, `osv-scanner.toml`, workflows `security.yml` (cargo-deny,
+  cargo-audit, pnpm audit, CodeQL), `scorecard.yml` (score 7,3 le 17/11/2026) et
+  `fuzzing.yml` (ClusterFuzzLite), résultats dans `docs/SECURITE.md`. Badge OpenSSF
+  Best Practices : projet 16849, réponses dans `docs/BADGE-OPENSSF.md`. VirusTotal :
+  1/71 sur l'installateur (Trapmine, score ML), faute de signature Authenticode
+  (pistes : SignPath Foundation gratuit, sinon Certum open source).
 - Pistes d'évolution classées : `docs/EVOLUTIONS.md`. **À tester d'abord : ce que
   Discord capte en partage de fenêtre** (§ 1).
 - **Prochaine étape : 6, Linux (PipeWire) puis macOS.** Reste aussi : signature du
