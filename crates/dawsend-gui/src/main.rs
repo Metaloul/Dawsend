@@ -4,6 +4,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod i18n;
+mod portable;
 mod settings;
 mod tray;
 mod updates;
@@ -33,6 +34,8 @@ pub struct AppState {
     dirty: AtomicBool,
     settings_path: PathBuf,
     log_dir: PathBuf,
+    /// Version portable (`portable.txt` à côté de l'exécutable).
+    portable: bool,
     updates: updates::Updates,
 }
 
@@ -134,7 +137,20 @@ async fn update_check(
 }
 
 #[tauri::command]
-async fn update_install(state: State<'_, Arc<AppState>>) -> Result<(), String> {
+async fn update_install(app: AppHandle, state: State<'_, Arc<AppState>>) -> Result<(), String> {
+    if state.portable {
+        // Version portable : pas d'installateur, on ouvre la page de téléchargement.
+        let url = portable::RELEASES_URL;
+        log::info!("mises à jour : version portable, ouverture de {url}");
+        return tauri::async_runtime::spawn_blocking(move || {
+            app.opener().open_url(url, None::<&str>).map_err(|e| {
+                log::warn!("ouverture de {url} impossible : {e}");
+                e.to_string()
+            })
+        })
+        .await
+        .map_err(|e| e.to_string())?;
+    }
     log::info!("mises à jour : installation demandée");
     updates::install(state.inner().clone()).await
 }
@@ -331,13 +347,19 @@ pub fn quit(app: &AppHandle) {
 }
 
 fn main() {
+    // Version portable : réglages et journaux à côté de l'exécutable.
+    let portable_dir = portable::data_dir();
+    let log_target = match &portable_dir {
+        Some(dir) => TargetKind::Folder {
+            path: dir.join("logs"),
+            file_name: Some("dawsend".into()),
+        },
+        None => TargetKind::LogDir {
+            file_name: Some("dawsend".into()),
+        },
+    };
     let log_plugin = tauri_plugin_log::Builder::new()
-        .targets([
-            Target::new(TargetKind::Stdout),
-            Target::new(TargetKind::LogDir {
-                file_name: Some("dawsend".into()),
-            }),
-        ])
+        .targets([Target::new(TargetKind::Stdout), Target::new(log_target)])
         .timezone_strategy(TimezoneStrategy::UseLocal)
         .rotation_strategy(RotationStrategy::KeepSome(5))
         .max_file_size(2_000_000)
@@ -365,10 +387,12 @@ fn main() {
                 .arg(MINIMIZED_ARG)
                 .build(),
         )
-        .setup(|app| {
+        .setup(move |app| {
             let handle = app.handle().clone();
-            let config_dir = app.path().app_config_dir()?;
-            let log_dir = app.path().app_log_dir()?;
+            let (config_dir, log_dir) = match &portable_dir {
+                Some(dir) => (dir.clone(), dir.join("logs")),
+                None => (app.path().app_config_dir()?, app.path().app_log_dir()?),
+            };
             let settings_path = settings::path_in(&config_dir);
             let loaded = settings::load(&settings_path);
             apply_log_level(loaded.app.verbose_log);
@@ -378,6 +402,12 @@ fn main() {
                 settings_path.display(),
                 log_dir.display()
             );
+            if portable_dir.is_some() {
+                log::info!(
+                    "version portable ({} trouvé à côté de l'exécutable)",
+                    portable::MARKER
+                );
+            }
 
             let (engine, engine_error) = match Engine::start(loaded.engine.clone()) {
                 Ok(e) => (Some(e), None),
@@ -393,7 +423,8 @@ fn main() {
                 dirty: AtomicBool::new(false),
                 settings_path,
                 log_dir,
-                updates: updates::Updates::new(),
+                portable: portable_dir.is_some(),
+                updates: updates::Updates::new(portable_dir.is_some()),
             });
             app.manage(state.clone());
 

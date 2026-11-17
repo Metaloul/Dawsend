@@ -1,0 +1,36 @@
+DAWSEND — VERSION PORTABLE / PORTABLE VERSION
+=============================================
+
+Ce fichier fait de Dawsend une version portable : laisse-le à côté de dawsend.exe.
+Les réglages et les journaux vont dans le dossier « data » de ce dossier. Rien n'est
+installé ; Windows doit avoir WebView2 (présent sur Windows 10 et 11 à jour).
+
+1. Ferme ton DAW. Copie le dossier « Dawsend.vst3 » dans
+   C:\Program Files\Common Files\VST3
+   (ou « Dawsend.clap » dans C:\Program Files\Common Files\CLAP).
+2. Lance dawsend.exe. L'appli se range près de l'horloge.
+3. Ouvre ton DAW, rescanne les plugins, mets « Dawsend » en insert sur une piste.
+
+Mise à jour : l'appli prévient et ouvre la page de téléchargement. Quitte Dawsend
+(clic droit sur l'icône, « Quitter Dawsend »), remplace les fichiers par ceux du
+nouveau zip et garde le dossier « data ».
+Pour tout enlever : décoche « Démarrer avec Windows » dans les réglages, quitte
+Dawsend, supprime ce dossier et le plugin copié à l'étape 1.
+
+-------------------------------------------------------------------------------
+
+This file makes Dawsend a portable version: keep it next to dawsend.exe. Settings
+and logs go to the "data" folder inside this folder. Nothing is installed; Windows
+needs WebView2 (included in up-to-date Windows 10 and 11).
+
+1. Close your DAW. Copy the "Dawsend.vst3" folder to
+   C:\Program Files\Common Files\VST3
+   (or "Dawsend.clap" to C:\Program Files\Common Files\CLAP).
+2. Run dawsend.exe. The app sits next to the clock.
+3. Open your DAW, rescan plugins, insert "Dawsend" on a track.
+
+Updates: the app tells you and opens the download page. Quit Dawsend (right-click
+the icon, "Quit Dawsend"), replace the files with those from the new zip and keep
+the "data" folder.
+To remove everything: untick "Start with Windows" in the settings, quit Dawsend,
+delete this folder and the plugin copied in step 1.

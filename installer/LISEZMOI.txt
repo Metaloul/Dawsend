@@ -77,11 +77,14 @@ L'écart d'horloge entre la carte ASIO et la sortie Windows est compensé en con
 - Journaux : Réglages > « Ouvrir le dossier des journaux »
   (%LOCALAPPDATA%\com.metaloul.dawsend\logs). Réglages enregistrés dans
   %APPDATA%\com.metaloul.dawsend\settings.json.
+  Version portable (fichier portable.txt à côté de dawsend.exe) : les deux sont
+  dans le dossier « data » à côté de dawsend.exe.
 
 
 6. OUTILS EN LIGNE DE COMMANDE
 ------------------------------
-dawsend-console.exe (dossier C:\Program Files\Dawsend) sert aux tests :
+dawsend-console.exe (dossier C:\Program Files\Dawsend, ou celui de la version
+portable) sert aux tests :
   dawsend-console list                          liste les sources publiées
   dawsend-console devices                       liste les sorties audio
   dawsend-console sine --name Test              publie un bip, comme le ferait le plugin
