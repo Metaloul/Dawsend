@@ -22,7 +22,8 @@ for (const line of readFileSync(doc, "utf8").split(/\r?\n/)) {
   const j = just.replace(/`R(\/[^`]*)?`/g, (_, p) => R + (p || "")).replace(/`/g, "");
   cur.rows.push([id, status.trim(), j]);
 }
-const enc = (s) => encodeURIComponent(s).replace(/%20/g, "+");
+const enc = (s) =>
+  encodeURIComponent(s).replace(/[()'*!]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase()).replace(/%20/g, "+");
 const parts = [["Basics", "Change control"], ["Reporting", "Quality"], ["Security", "Analysis"]];
 const urls = parts.map((names, i) => {
   const q = [];
