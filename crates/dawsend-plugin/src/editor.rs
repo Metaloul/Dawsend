@@ -113,8 +113,8 @@ pub fn create(params: Arc<DawsendParams>, shared: Arc<Shared>) -> Option<Box<dyn
             style.visuals.panel_fill = theme::INK;
             style.visuals.extreme_bg_color = theme::WELL;
             style.visuals.selection.bg_fill = theme::AMBER.gamma_multiply(0.45);
-            style.visuals.selection.stroke = Stroke::new(1.0, theme::PAPER);
-            style.visuals.text_cursor.stroke = Stroke::new(2.0, theme::AMBER);
+            style.visuals.selection.stroke = Stroke::new(1.0_f32, theme::PAPER);
+            style.visuals.text_cursor.stroke = Stroke::new(2.0_f32, theme::AMBER);
             ctx.set_style(style);
             st.header = decode_png(HEADER_PNG)
                 .map(|img| ctx.load_texture("dawsend-header", img, TextureOptions::LINEAR));
@@ -167,8 +167,10 @@ fn decode_png(bytes: &[u8]) -> Option<ColorImage> {
     let rgba: Vec<u8> = match info.color_type {
         png::ColorType::Rgba => buf[..w * h * 4].to_vec(),
         png::ColorType::Rgb => buf[..w * h * 3]
-            .chunks_exact(3)
-            .flat_map(|p| [p[0], p[1], p[2], 255])
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .flat_map(|&[r, g, b]| [r, g, b, 255])
             .collect(),
         _ => return None,
     };
@@ -319,7 +321,7 @@ fn header(ui: &mut egui::Ui, st: &UiState, rect: Rect) {
     p.rect_filled(rect, CornerRadius::ZERO, theme::FACE);
     p.line_segment(
         [rect.left_bottom(), rect.right_bottom()],
-        Stroke::new(1.0, theme::LINE),
+        Stroke::new(1.0_f32, theme::LINE),
     );
     match &st.header {
         Some(tex) => {
@@ -406,7 +408,7 @@ fn name_field(ui: &mut egui::Ui, st: &mut UiState, rect: Rect) {
     ui.painter().rect_stroke(
         rect,
         CornerRadius::same(6),
-        Stroke::new(1.0, border),
+        Stroke::new(1.0_f32, border),
         StrokeKind::Inside,
     );
 
@@ -451,7 +453,7 @@ fn footswitch(ui: &mut egui::Ui, setter: &ParamSetter, st: &UiState, send: bool,
         theme::CTRL
     };
     p.circle_filled(center, 28.0, theme::WELL);
-    p.circle_stroke(center, 25.5, Stroke::new(3.0, ring));
+    p.circle_stroke(center, 25.5, Stroke::new(3.0_f32, ring));
     // Capuchon : deux disques décalés imitent l'éclairage par le haut.
     let pressed = resp.is_pointer_button_down_on();
     let cap = if pressed { 19.0 } else { 20.0 };
@@ -464,10 +466,10 @@ fn footswitch(ui: &mut egui::Ui, setter: &ParamSetter, st: &UiState, send: bool,
     p.circle_stroke(
         center,
         cap + 1.0,
-        Stroke::new(1.0, Color32::from_white_alpha(14)),
+        Stroke::new(1.0_f32, Color32::from_white_alpha(14)),
     );
     if resp.has_focus() {
-        p.circle_stroke(center, 29.5, Stroke::new(1.0, theme::PAPER));
+        p.circle_stroke(center, 29.5, Stroke::new(1.0_f32, theme::PAPER));
     }
 
     let resp = resp.on_hover_text(st.texts.send_hint);
@@ -485,7 +487,7 @@ fn led(p: &egui::Painter, center: Pos2, color: Color32) {
     }
     p.circle_filled(center, 5.0, color);
     if color == theme::UNLIT {
-        p.circle_stroke(center, 5.0, Stroke::new(1.0, theme::LINE));
+        p.circle_stroke(center, 5.0, Stroke::new(1.0_f32, theme::LINE));
     }
 }
 

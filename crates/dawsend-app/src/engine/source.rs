@@ -521,7 +521,7 @@ impl SourcePlayer {
             return;
         }
         let mut g = 1.0f32;
-        for o in out.chunks_exact_mut(2) {
+        for o in out.as_chunks_mut::<2>().0 {
             g = (g - self.fade_inc).max(0.0);
             o[0] += self.tail[0] * g;
             o[1] += self.tail[1] * g;
@@ -612,8 +612,10 @@ mod tests {
         assert_eq!(p.stats().underruns.load(Ordering::Relaxed), 0);
         // Une sinusoïde de 440 Hz ré-échantillonnée : pas de saut brutal entre trames.
         let max_jump = out
-            .chunks_exact(2)
-            .zip(out.chunks_exact(2).skip(1))
+            .as_chunks::<2>()
+            .0
+            .windows(2)
+            .map(|w| (w[0], w[1]))
             .map(|(a, b)| (a[0] - b[0]).abs())
             .fold(0.0f32, f32::max);
         assert!(max_jump < 0.05, "saut {max_jump}");
@@ -851,7 +853,7 @@ mod tests {
             out.fill(0.0);
             p.render_add(&mut out, 480);
             if i > 50 {
-                all.extend(out.chunks_exact(2).map(|f| f[0]));
+                all.extend(out.as_chunks::<2>().0.iter().map(|f| f[0]));
             }
         }
         let st = p.stats();
