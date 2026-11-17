@@ -48,9 +48,11 @@ Because the existing options are a pain.
 - **VoiceMeeter** is hell: buses, virtual cables, a default device to change in
   Windows, settings nobody understands, and crackles after a Windows update. You
   spend more time tweaking it than playing.
-- **ReaStream + OBS** is less bad, but still annoying: two programs to launch and set
-  up every time, and OBS running in the background just to pass audio along. Heavy
-  for what it does.
+- **ReaStream + OBS** is less of a pain, since you only set it up once: ReaStream on
+  the DAW track, a microphone source in OBS with ReaStream as a filter on it, and
+  monitoring turned on so the system can hear it. But it means a whole streaming
+  app running in the background, just to pass some audio along. Heavy, just for
+  sound.
 
 Dawsend does **one thing**, and needs no skills at all:
 
