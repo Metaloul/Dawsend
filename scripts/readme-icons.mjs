@@ -39,6 +39,9 @@ const ICONS = {
   hash: ["hash", ACCENT],
   download: ["download", ACCENT],
   book: ["book", ACCENT],
+  bug: ["bug", ACCENT],
+  "file-badge": ["file-badge", ACCENT],
+  pin: ["pin", ACCENT],
   // Voyants du plugin, aux couleurs de l'interface (assets/palette.md).
   "led-ok": ["dot-fill", "#3DD68C"],
   "led-warn": ["dot-fill", "#F2B83B"],

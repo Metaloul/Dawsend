@@ -232,6 +232,18 @@ What changed in each version: [CHANGELOG.md](CHANGELOG.md) (in French).
 | <img src="docs/icons/search.svg" width="16" height="16" alt=""> **Code scanned on every change** | CodeQL, cargo-deny, cargo-audit, `pnpm audit`, OpenSSF Scorecard, Dependabot. |
 | <img src="docs/icons/shield-check.svg" width="16" height="16" alt=""> **Antivirus** | Microsoft Defender on the binaries, VirusTotal on every published installer (link in the release notes). |
 | <img src="docs/icons/hash.svg" width="16" height="16" alt=""> **SHA-256 hashes** | `SHA256SUMS.txt` published with every release. |
+| <img src="docs/icons/file-badge.svg" width="16" height="16" alt=""> **Build provenance** | Every release carries a [SLSA level 3](https://slsa.dev/) attestation (`Dawsend-X.Y.Z.intoto.jsonl`), signed with Sigstore, that ties each file to the workflow and commit that built it. |
+| <img src="docs/icons/bug.svg" width="16" height="16" alt=""> **Fuzzing** | The app's shared-memory reader is fuzzed with [ClusterFuzzLite](https://google.github.io/clusterfuzzlite/) (libFuzzer) on every change to it and every week: no input written by a plugin may crash it. |
+| <img src="docs/icons/pin.svg" width="16" height="16" alt=""> **Pinned CI** | Every GitHub Action is pinned to a commit SHA; workflows get read-only tokens by default. |
+
+To check that a download was built by this repository's release workflow, with
+[slsa-verifier](https://github.com/slsa-framework/slsa-verifier):
+
+```sh
+slsa-verifier verify-artifact Dawsend-Setup-X.Y.Z.exe \
+  --provenance-path Dawsend-X.Y.Z.intoto.jsonl \
+  --source-uri github.com/Metaloul/Dawsend --source-tag vX.Y.Z
+```
 
 Detailed results, and how to run the checks yourself:
 [docs/SECURITE.md](docs/SECURITE.md) (in French). To report a vulnerability
@@ -328,6 +340,7 @@ addition stays invisible to people who don't need it.
 | `crates/dawsend-gui` | Tauri 2 app (`dawsend.exe`): window, tray, settings, updates, logs |
 | `ui/` | the app's Svelte 5 interface |
 | `installer/` | NSIS installer |
+| `fuzz/` | fuzz target for the shared-memory reader (cargo-fuzz, run by ClusterFuzzLite) |
 | `scripts/` | release tooling (`latest.json`), README icons |
 | `assets/` | logo, icons, fonts, palette |
 | `docs/` | specification, architecture, security, roadmap, test procedures (in French) |
@@ -361,7 +374,8 @@ Testing without a DAW: `dawsend-console sine --name Guitar`, then the app.
 3. Wait for CI to pass on `main`, then push the `vX.Y.Z` tag. The
    [Release](.github/workflows/release.yml) workflow reuses that CI result (or runs the
    tests itself), builds the installer and the portable zip, signs the installer, writes `latest.json`
-   and `SHA256SUMS.txt`, publishes the release and has it scanned by VirusTotal.
+   and `SHA256SUMS.txt`, publishes the release, attaches its SLSA provenance and has it
+   scanned by VirusTotal.
 
 Repository secrets: `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
 (private signing key and its password), optionally `VT_API_KEY`.

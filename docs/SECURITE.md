@@ -32,6 +32,20 @@ code, les dépendances et les fichiers publiés sont contrôlés. Pour signaler 
   Get-FileHash .\Dawsend-Setup-0.1.0.exe -Algorithm SHA256
   ```
 
+- À partir de la 0.1.1, chaque release publie aussi `Dawsend-X.Y.Z.intoto.jsonl` : une
+  attestation de provenance [SLSA niveau 3](https://slsa.dev/), produite par le
+  [générateur officiel](https://github.com/slsa-framework/slsa-github-generator) et
+  signée par Sigstore. Elle prouve que chaque fichier publié (installateur, zip,
+  `latest.json`, `SHA256SUMS.txt`) sort du workflow `release.yml` de ce dépôt, sur le
+  commit du tag. Vérification avec
+  [slsa-verifier](https://github.com/slsa-framework/slsa-verifier) :
+
+  ```sh
+  slsa-verifier verify-artifact Dawsend-Setup-0.1.1.exe \
+    --provenance-path Dawsend-0.1.1.intoto.jsonl \
+    --source-uri github.com/Metaloul/Dawsend --source-tag v0.1.1
+  ```
+
 ## Contrôles automatiques (GitHub Actions)
 
 | Outil | Ce qu'il vérifie | Quand |
@@ -41,12 +55,26 @@ code, les dépendances et les fichiers publiés sont contrôlés. Pour signaler 
 | [cargo-audit](https://github.com/rustsec/rustsec/tree/main/cargo-audit) | Failles connues dans `Cargo.lock` | À chaque push et chaque PR |
 | `pnpm audit` | Failles connues dans les dépendances de l'interface | À chaque push et chaque PR |
 | [OpenSSF Scorecard](https://scorecard.dev/) | Bonnes pratiques du dépôt (protection de branche, workflows, dépendances épinglées…) | Chaque semaine |
+| [ClusterFuzzLite](https://google.github.io/clusterfuzzlite/) | Fuzzing (libFuzzer + AddressSanitizer) du lecteur de la mémoire partagée : des octets arbitraires dans un slot ne doivent ni faire paniquer l'appli ni la faire lire hors de la zone | À chaque PR qui touche `dawsend-core` (5 min), et chaque semaine (30 min) |
 | [Dependabot](https://docs.github.com/code-security/dependabot) | Propose les mises à jour des dépendances Rust, npm et des actions GitHub | Chaque semaine |
 | `cargo clippy -D warnings` | Lints Rust, aucun avertissement toléré | À chaque push et chaque PR |
 | [VirusTotal](https://www.virustotal.com/) | Analyse de l'installateur publié par environ 70 antivirus | À chaque release (si la clé d'API est configurée) |
 
 Les règles de cargo-deny sont dans [`deny.toml`](../deny.toml) ; les workflows dans
 [`.github/workflows/`](../.github/workflows/).
+
+Durcissement de la chaîne de build :
+
+- **Actions épinglées** : chaque action GitHub est référencée par le SHA de son commit
+  (avec la version en commentaire, `# v7.0.1`), pas par un tag qu'on pourrait déplacer.
+  Dependabot les fait monter. Seule exception : le générateur SLSA, qui doit être
+  appelé par son tag pour que sa provenance se vérifie.
+- **Jetons en lecture seule** : chaque workflow démarre avec `contents: read` ; seuls
+  les jobs qui en ont besoin demandent plus (création de la release, envoi des
+  résultats CodeQL et Scorecard, signature de la provenance).
+- **Alertes examinées** : les avis RustSec sans correctif (ci-dessous) sont acceptés
+  dans `deny.toml` et dans [`osv-scanner.toml`](../osv-scanner.toml) (lu par
+  OSV-Scanner et Scorecard), avec la raison et une date d'expiration à six mois.
 
 ## Résultats au 17 novembre 2026 (version 0.1.0)
 
@@ -55,7 +83,7 @@ Les règles de cargo-deny sont dans [`deny.toml`](../deny.toml) ; les workflows 
 | Contrôle | Résultat |
 | --- | --- |
 | `cargo deny check` (cargo-deny 0.21) | `advisories ok, bans ok, licenses ok, sources ok` |
-| `cargo audit` | **Aucune faille connue.** 8 avertissements sur des dépendances indirectes, détaillés ci-dessous |
+| `cargo audit` | **Aucune faille connue.** 9 avertissements sur des dépendances indirectes, détaillés ci-dessous |
 | `pnpm audit --prod` | `No known vulnerabilities found` |
 
 Avertissements restants, tous sur des crates tirés indirectement par nos dépendances
@@ -69,6 +97,11 @@ Avertissements restants, tous sur des crates tirés indirectement par nos dépen
 | `proc-macro-error` | [RUSTSEC-2024-0370](https://rustsec.org/advisories/RUSTSEC-2024-0370) | Plus maintenu | `glib` (Tauri sous Linux) | Utilisé seulement à la compilation, absent du programme Windows |
 | `glib` | [RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429) | `VariantStrIter` incorrect | GTK (Tauri sous Linux) | Absent du programme Windows |
 | `zvariant`, `zvariant_derive`, `zbus_names` | [RUSTSEC-2026-0370](https://rustsec.org/advisories/RUSTSEC-2026-0370), [-0371](https://rustsec.org/advisories/RUSTSEC-2026-0371), [-0372](https://rustsec.org/advisories/RUSTSEC-2026-0372) | Plus maintenus | `zbus` (D-Bus, plugins Tauri sous Linux) | Absents du programme Windows |
+| `chrono` | [RUSTSEC-2026-0543](https://rustsec.org/advisories/RUSTSEC-2026-0543) | Plus maintenu | `serde_with` (dépendance facultative) | Inscrit dans `Cargo.lock` mais jamais compilé |
+
+La faille de `serde_with` signalée par Scorecard
+([GHSA-7gcf-g7xr-8hxj](https://github.com/advisories/GHSA-7gcf-g7xr-8hxj)) est
+corrigée : `Cargo.lock` est passé à la version 3.24.
 
 ### Licences
 
@@ -109,6 +142,13 @@ cargo install cargo-deny cargo-audit --locked
 cargo deny check
 cargo audit
 pnpm --dir ui audit --prod
+```
+
+Fuzzing en local (Linux ou WSL, Rust nightly) :
+
+```sh
+cargo install cargo-fuzz --locked
+cd fuzz && cargo +nightly fuzz run reader -- -max_total_time=300
 ```
 
 ```powershell

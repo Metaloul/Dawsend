@@ -8,6 +8,9 @@
 # Secrets du dépôt :
 #   TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD  (obligatoires)
 #   VT_API_KEY  (facultatif : analyse VirusTotal des fichiers publiés)
+#
+# Le job « provenance » ajoute Dawsend-X.Y.Z.intoto.jsonl : attestation SLSA niveau 3,
+# signée par Sigstore, qui relie chaque fichier publié à ce workflow et à ce commit.
 name: Release
 
 on:
@@ -15,9 +18,9 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+# Droits minimaux par défaut ; chaque job demande ce dont il a besoin.
 permissions:
-  contents: write
-  actions: read
+  contents: read
 
 concurrency:
   group: release
@@ -27,10 +30,16 @@ jobs:
   windows:
     runs-on: windows-latest
     timeout-minutes: 60
+    permissions:
+      contents: write # création de la release
+      actions: read # lecture du résultat de la CI de ce commit
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      hashes: ${{ steps.hashes.outputs.hashes }}
     env:
       VT_API_KEY: ${{ secrets.VT_API_KEY }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Version
         id: version
@@ -42,16 +51,17 @@ jobs:
           }
           "version=$v" >> $env:GITHUB_OUTPUT
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Rust stable
+        run: rustup toolchain install stable --profile minimal && rustup default stable
       # Lit le cache de main. N'en enregistre pas : un cache créé sur un tag n'est
       # lisible par aucun autre tag, il ne servirait jamais.
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           save-if: false
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           version: 10
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: pnpm
@@ -107,6 +117,15 @@ jobs:
             Set-Content -Encoding ascii target/installer/SHA256SUMS.txt
           Get-Content target/installer/SHA256SUMS.txt
 
+      # Sujets de la provenance : le contenu de SHA256SUMS.txt (fins de ligne Unix), en
+      # base64, comme l'attend le générateur SLSA.
+      - name: Empreintes pour la provenance
+        id: hashes
+        shell: pwsh
+        run: |
+          $txt = ((Get-Content target/installer/SHA256SUMS.txt) -join "`n") + "`n"
+          "hashes=" + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($txt)) >> $env:GITHUB_OUTPUT
+
       - name: Release GitHub
         shell: pwsh
         env:
@@ -124,7 +143,7 @@ jobs:
       - name: VirusTotal
         id: virustotal
         if: env.VT_API_KEY != ''
-        uses: crazy-max/ghaction-virustotal@v5
+        uses: crazy-max/ghaction-virustotal@936d8c5c00afe97d3d9a1af26d017cfdf26800a2 # v5.0.0
         with:
           vt_api_key: ${{ secrets.VT_API_KEY }}
           request_rate: 4
@@ -149,3 +168,18 @@ jobs:
           $body = (Get-Content target/installer/release-notes.md -Raw) + "`n### Analyse antivirus`n`n" + ($links -join "`n") + "`n"
           Set-Content -Path target/installer/release-notes.md -Value $body -Encoding utf8
           gh release edit "v$v" --notes-file target/installer/release-notes.md
+
+  # Provenance SLSA, jointe à la release. Le générateur se référence par tag (et non
+  # par SHA) : c'est ce que vérifient slsa-verifier et Scorecard.
+  provenance:
+    needs: windows
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      actions: read # détection de l'environnement GitHub Actions
+      id-token: write # signature Sigstore
+      contents: write # ajout du fichier à la release
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: ${{ needs.windows.outputs.hashes }}
+      upload-assets: true
+      provenance-name: Dawsend-${{ needs.windows.outputs.version }}.intoto.jsonl

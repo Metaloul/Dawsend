@@ -22,3 +22,15 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+  # Cibles de fuzzing (espace de travail à part) et image de ClusterFuzzLite.
+  - package-ecosystem: cargo
+    directory: /fuzz
+    schedule:
+      interval: monthly
+    groups:
+      fuzz:
+        patterns: ["*"]
+  - package-ecosystem: docker
+    directory: /.clusterfuzzlite
+    schedule:
+      interval: monthly

@@ -1,0 +1,30 @@
+# Cibles de fuzzing (cargo-fuzz, libFuzzer). Hors du workspace principal : elles
+# demandent Rust nightly et ne font partie d'aucun binaire livré.
+#
+#   cargo +nightly fuzz run reader        (Linux ou macOS)
+#
+# En CI : ClusterFuzzLite (.clusterfuzzlite/, .github/workflows/fuzzing.yml).
+[package]
+name = "dawsend-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+license = "MIT"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4.13"
+dawsend-core = { path = "../crates/dawsend-core", features = ["fuzzing"] }
+
+# Espace de travail à part, pour ne pas entrer dans celui du projet.
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "reader"
+path = "fuzz_targets/reader.rs"
+test = false
+doc = false
+bench = false

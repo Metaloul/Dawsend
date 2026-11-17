@@ -4,6 +4,8 @@
 //! Voir `docs/ARCHITECTURE.md` pour la spécification du format.
 
 pub mod clock;
+#[cfg(any(test, feature = "fuzzing"))]
+pub mod fuzzing;
 pub mod layout;
 pub mod process;
 pub mod region;

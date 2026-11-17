@@ -90,7 +90,9 @@ qu'il promet à l'utilisateur : `README.md`.
 | `installer/` | `dawsend.nsi` (NSIS), `build.ps1` (Windows), `build.sh` (Linux, mingw), `LISEZMOI.txt`. |
 | `scripts/latest-json.mjs` | Écrit `latest.json` et les notes de release à partir de `CHANGELOG.md`. |
 | `xtask/` | `cargo xtask bundle dawsend-plugin --release` (nih-plug). |
-| `.github/workflows/` | `ci.yml`, `security.yml`, `scorecard.yml`, `release.yml`. |
+| `.github/workflows/` | `ci.yml`, `security.yml`, `scorecard.yml`, `release.yml` (+ provenance SLSA), `fuzzing.yml`. |
+| `fuzz/`, `.clusterfuzzlite/` | Fuzzing du lecteur de la mémoire partagée (cible `reader`, qui appelle `dawsend_core::fuzzing`, feature `fuzzing`) ; workspace à part, lancé par ClusterFuzzLite. |
+| `osv-scanner.toml` | Avis RustSec acceptés pour OSV-Scanner et Scorecard (mêmes décisions que `deny.toml`). |
 | `assets/` | Logo, wordmark, icônes, polices (OFL), palette. |
 | `LICENSES/` | Textes GPL-3.0, OFL-1.1 et récapitulatif des licences. |
 
@@ -116,6 +118,8 @@ powershell -ExecutionPolicy Bypass -File installer\build.ps1   # installateur co
 - **Tester sans DAW** : `dawsend-console sine --name Guitare` (publie un bip comme un
   plugin), puis l'appli ou `dawsend-console play`. `--rate` et `--ppm` simulent une
   autre fréquence et une dérive.
+- **Fuzzing** (Linux ou WSL, nightly) : `cd fuzz && cargo +nightly fuzz run reader`.
+  Sous Windows, `cargo clippy` dans `fuzz/` vérifie au moins que la cible compile.
 - **Toolchain** : Rust **1.93** au minimum (`rust-version` du workspace, utilisé par
   le résolveur de Cargo), édition 2024. Node 22, pnpm 10, NSIS 3.
 
@@ -195,6 +199,18 @@ la release saute alors ses tests (étape « CI de ce commit »), sinon elle les 
 `*.md`, `docs/` ou `LICENSES/`. Seul `main` enregistre le cache Rust (les PR le
 lisent), la release n'en enregistre pas. Dependabot groupe ses mises à jour par
 écosystème (cargo, npm, actions) : une PR de chaque par semaine au plus.
+
+**Règles de sécurité des workflows** (suivies par OpenSSF Scorecard) :
+
+- Toute action s'épingle par le SHA complet de son commit, version en commentaire :
+  `uses: actions/checkout@<sha> # v7.0.1`. Jamais un tag seul. Exception : le
+  générateur SLSA (`slsa-github-generator/...@v2.1.0`), qui doit être appelé par tag.
+- Chaque workflow commence par `permissions: contents: read` ; un job qui écrit
+  demande ses droits lui-même.
+- Un avis RustSec accepté dans `deny.toml` l'est aussi dans `osv-scanner.toml`
+  (raison et `effectiveUntil`), et figure dans `docs/SECURITE.md`.
+- Sur un tag, le job `provenance` de `release.yml` joint `Dawsend-X.Y.Z.intoto.jsonl`
+  (SLSA 3) à la release ; ses sujets sont les lignes de `SHA256SUMS.txt`.
 
 L'appli lit `https://github.com/Metaloul/Dawsend/releases/latest/download/latest.json`
 (clés de plateforme `windows-x86_64` et `windows-x86_64-nsis`). Elle installe en
