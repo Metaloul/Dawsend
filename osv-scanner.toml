@@ -8,45 +8,45 @@
 
 [[IgnoredVulns]]
 id = "RUSTSEC-2021-0145"
-effectiveUntil = 2027-05-17
+ignoreUntil = 2027-05-17
 reason = "atty (via nih_log de nih-plug) : lecture non alignée dans la détection d'un terminal MSYS sous Windows, appelée une fois à l'initialisation du journal du plugin ; sans effet sur x86-64, qui permet les lectures non alignées. Pas de version corrigée."
 
 [[IgnoredVulns]]
 id = "RUSTSEC-2024-0375"
-effectiveUntil = 2027-05-17
+ignoreUntil = 2027-05-17
 reason = "atty non maintenue, via nih_log de nih-plug ; à retirer quand nih-plug passera à std::io::IsTerminal."
 
 [[IgnoredVulns]]
 id = "RUSTSEC-2024-0429"
-effectiveUntil = 2027-05-17
+ignoreUntil = 2027-05-17
 reason = "glib 0.18 (via tray-icon de Tauri) : uniquement sous Linux, pas compilée pour Windows ; Dawsend n'utilise pas VariantStrIter. Corrigée en 0.20, que Tauri n'utilise pas encore."
 
 [[IgnoredVulns]]
 id = "RUSTSEC-2024-0370"
-effectiveUntil = 2027-05-17
+ignoreUntil = 2027-05-17
 reason = "proc-macro-error non maintenue : macro de compilation de glib-macros, uniquement sous Linux, rien dans les binaires."
 
 [[IgnoredVulns]]
 id = "RUSTSEC-2026-0192"
-effectiveUntil = 2027-05-17
+ignoreUntil = 2027-05-17
 reason = "ttf-parser non maintenue, via egui (interface du plugin) : ne lit que les polices intégrées au plugin, jamais un fichier fourni par l'utilisateur."
 
 [[IgnoredVulns]]
 id = "RUSTSEC-2026-0370"
-effectiveUntil = 2027-05-17
+ignoreUntil = 2027-05-17
 reason = "zvariant non maintenue (fusionnée dans zbus) : D-Bus de tauri-plugin-single-instance et opener, uniquement sous Linux, pas compilée pour Windows."
 
 [[IgnoredVulns]]
 id = "RUSTSEC-2026-0371"
-effectiveUntil = 2027-05-17
+ignoreUntil = 2027-05-17
 reason = "zbus_names non maintenue (fusionnée dans zbus) : D-Bus, uniquement sous Linux, pas compilée pour Windows."
 
 [[IgnoredVulns]]
 id = "RUSTSEC-2026-0372"
-effectiveUntil = 2027-05-17
+ignoreUntil = 2027-05-17
 reason = "zvariant_derive non maintenue (fusionnée dans zbus) : macro D-Bus, uniquement sous Linux, rien dans les binaires Windows."
 
 [[IgnoredVulns]]
 id = "RUSTSEC-2026-0543"
-effectiveUntil = 2027-05-17
+ignoreUntil = 2027-05-17
 reason = "chrono non maintenue : présente dans Cargo.lock comme dépendance facultative de serde_with, mais absente du graphe de compilation (cargo tree -i chrono ne trouve rien)."

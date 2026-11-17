@@ -208,7 +208,7 @@ lisent), la release n'en enregistre pas. Dependabot groupe ses mises à jour par
 - Chaque workflow commence par `permissions: contents: read` ; un job qui écrit
   demande ses droits lui-même.
 - Un avis RustSec accepté dans `deny.toml` l'est aussi dans `osv-scanner.toml`
-  (raison et `effectiveUntil`), et figure dans `docs/SECURITE.md`.
+  (raison et `ignoreUntil`), et figure dans `docs/SECURITE.md`.
 - Sur un tag, le job `provenance` de `release.yml` joint `Dawsend-X.Y.Z.intoto.jsonl`
   (SLSA 3) à la release ; ses sujets sont les lignes de `SHA256SUMS.txt`.
 
