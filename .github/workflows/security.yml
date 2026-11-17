@@ -14,6 +14,11 @@ on:
 permissions:
   contents: read
 
+# Un commit plus récent sur la même branche annule l'analyse devenue obsolète.
+concurrency:
+  group: securite-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   dependencies:
     name: Dépendances (cargo-deny, cargo-audit, pnpm audit)
