@@ -14,6 +14,7 @@
 [![CI](https://github.com/Metaloul/Dawsend/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Metaloul/Dawsend/actions/workflows/ci.yml)
 [![Security](https://github.com/Metaloul/Dawsend/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/Metaloul/Dawsend/actions/workflows/security.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Metaloul/Dawsend/badge)](https://scorecard.dev/viewer/?uri=github.com/Metaloul/Dawsend)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16849/badge)](https://www.bestpractices.dev/projects/16849)
 [![License](https://img.shields.io/github/license/Metaloul/Dawsend?label=license)](LICENSE)
 
 [![Windows](https://img.shields.io/badge/Windows-10_·_11-0078d4?logo=windows)](#requirements)

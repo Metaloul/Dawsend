@@ -5,12 +5,15 @@ critère par critère (identifiants du site). Les justifications sont en anglais
 le formulaire. À tenir à jour si le projet change, et à relire avant chaque nouvelle
 demande de niveau.
 
-**Inscription** : se connecter sur bestpractices.dev avec son compte GitHub, **Get
-Your Badge Now**, choisir `Metaloul/Dawsend`. Le site remplit une partie des réponses
-tout seul ; vérifier chacune avec ce tableau. Dès l'inscription, le projet passe « in
-progress » (Scorecard : 2/10), puis « passing » quand tous les MUST sont remplis
-(5/10). Ajouter ensuite le badge en tête du README, avec le numéro du projet :
-`[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/<n>/badge)](https://www.bestpractices.dev/projects/<n>)`.
+Projet : [n° 16849](https://www.bestpractices.dev/projects/16849) (badge en tête du
+README). Dès l'inscription, il est « in progress » (Scorecard : 2/10), puis « passing »
+quand tous les MUST sont remplis (5/10).
+
+**Remplir le formulaire** : `node scripts/badge-urls.mjs` affiche trois liens qui
+proposent ces réponses dans le formulaire (connecté avec le compte GitHub du
+projet). Le site ne remplit que les champs encore vides et n'enregistre rien avant
+**Save** : relire chaque réponse surlignée, enregistrer, puis ouvrir le lien suivant.
+Le site analyse aussi le dépôt de son côté et peut proposer d'autres valeurs.
 
 Légende : **Met**, **N/A**, **Unmet**. Les deux critères marqués « à confirmer » portent
 sur les connaissances du mainteneur : lui seul peut y répondre.
