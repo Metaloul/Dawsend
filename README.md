@@ -143,6 +143,22 @@ the file, compare its SHA-256 hash with the release's `SHA256SUMS.txt` (see
 
 Uninstall from **Settings › Apps** or from the Start menu.
 
+### Portable version
+
+Prefer not to install anything? Download **`Dawsend-<version>-portable.zip`** from the
+same release and extract it anywhere (your user folder, a USB drive):
+
+1. Close your DAW and copy the `Dawsend.vst3` folder to
+   `C:\Program Files\Common Files\VST3` (or `Dawsend.clap` to
+   `C:\Program Files\Common Files\CLAP`).
+2. Run `dawsend.exe`.
+
+The `portable.txt` file next to `dawsend.exe` turns on portable mode: settings and logs
+are kept in a `data` folder next to it, and when a new version is out, the app opens the
+download page instead of running the installer. To update, quit Dawsend and replace the
+files with those from the new zip, keeping `data`. The portable version needs WebView2,
+which ships with up-to-date Windows 10 and 11.
+
 ## Usage
 
 ### In your DAW
@@ -202,6 +218,8 @@ release notes.
 - Your install choices (shortcut, VST3, CLAP) are kept, and the app restarts by
   itself at the end.
 - To turn checking off: **Settings › Updates › Check for updates**.
+- Portable version: the button reads **Download** and opens the release page; replace
+  the files yourself (see [Portable version](#portable-version)).
 
 What changed in each version: [CHANGELOG.md](CHANGELOG.md) (in French).
 
@@ -240,6 +258,7 @@ privately: [SECURITY.md](SECURITY.md).
 | Logs | `%LOCALAPPDATA%\com.metaloul.dawsend\logs\dawsend.log` (2 MB per file, 5 kept) |
 | Start with Windows | `Dawsend` value of `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` |
 | Source name | saved with your DAW project |
+| Portable version | settings and logs in the `data` folder next to `dawsend.exe` |
 
 In the settings, the **Open folder** button (Logs section) opens the log folder; the
 **Detailed log** switch adds the details, without restarting. To follow the log
@@ -340,8 +359,8 @@ Testing without a DAW: `dawsend-console sine --name Guitar`, then the app.
 2. Add its `## X.Y.Z` section at the top of [CHANGELOG.md](CHANGELOG.md), written for
    users: it becomes the release notes and the text of the update banner.
 3. Push the `vX.Y.Z` tag. The [Release](.github/workflows/release.yml) workflow tests,
-   builds the installer, signs it, writes `latest.json` and `SHA256SUMS.txt`,
-   publishes the release and has it scanned by VirusTotal.
+   builds the installer and the portable zip, signs the installer, writes `latest.json`
+   and `SHA256SUMS.txt`, publishes the release and has it scanned by VirusTotal.
 
 Repository secrets: `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
 (private signing key and its password), optionally `VT_API_KEY`.
