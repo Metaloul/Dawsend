@@ -1,6 +1,7 @@
 /target
 **/node_modules
 installer/staging/
+installer/portable-staging/
 /ui/dist
 /crates/dawsend-gui/gen
 

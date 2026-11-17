@@ -180,7 +180,7 @@ impl Mixer {
         // Lissage d'environ 20 ms à 48 kHz.
         const COEF: f32 = 0.001;
         let mut peak = [0.0f32; 2];
-        for frame in out.chunks_exact_mut(2) {
+        for frame in out.as_chunks_mut::<2>().0 {
             self.level += (wanted - self.level) * COEF;
             for (c, s) in frame.iter_mut().enumerate() {
                 let v = soft_limit(*s * self.level);

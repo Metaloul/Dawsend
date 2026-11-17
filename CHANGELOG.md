@@ -15,4 +15,6 @@ Première version publique.
   craquement ni de décalage qui grossit au fil de la soirée.
 - Appli discrète dans la zone de notification, avec vumètres, volume général et limiteur.
 - Mises à jour proposées par l'appli, vérifiées et signées.
+- Installateur Windows, ou version portable (zip) qui n'installe rien et garde ses
+  réglages dans son dossier.
 - En français et en anglais.

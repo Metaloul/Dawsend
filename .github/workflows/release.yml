@@ -1,5 +1,6 @@
-# Publie une version : installateur Windows signé pour les mises à jour, latest.json
-# (lu par l'appli), sommes SHA-256 et notes tirées de CHANGELOG.md.
+# Publie une version : installateur Windows signé pour les mises à jour, version
+# portable (zip), latest.json (lu par l'appli), sommes SHA-256 et notes tirées de
+# CHANGELOG.md.
 #
 # Lancement : pousser un tag « vX.Y.Z » égal à la version de Cargo.toml, ou lancer le
 # workflow à la main depuis l'onglet Actions.
@@ -77,7 +78,7 @@ jobs:
       - name: Sommes SHA-256
         shell: pwsh
         run: |
-          Get-ChildItem target/installer/Dawsend-Setup-*.exe, target/installer/latest.json |
+          Get-ChildItem target/installer/Dawsend-Setup-*.exe, target/installer/Dawsend-*-portable.zip, target/installer/latest.json |
             ForEach-Object { "{0}  {1}" -f (Get-FileHash $_ -Algorithm SHA256).Hash.ToLower(), $_.Name } |
             Set-Content -Encoding ascii target/installer/SHA256SUMS.txt
           Get-Content target/installer/SHA256SUMS.txt
@@ -91,6 +92,7 @@ jobs:
           gh release create "v$v" `
             "target/installer/Dawsend-Setup-$v.exe" `
             "target/installer/Dawsend-Setup-$v.exe.sig" `
+            "target/installer/Dawsend-$v-portable.zip" `
             target/installer/latest.json `
             target/installer/SHA256SUMS.txt `
             --title "Dawsend $v" --notes-file target/installer/release-notes.md
@@ -104,6 +106,7 @@ jobs:
           request_rate: 4
           files: |
             target/installer/Dawsend-Setup-*.exe
+            target/installer/Dawsend-*-portable.zip
 
       # Ajoute le lien du rapport VirusTotal aux notes de la release (sortie
       # « fichier=adresse » de l'action, séparée par des virgules).

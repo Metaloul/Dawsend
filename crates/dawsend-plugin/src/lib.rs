@@ -354,4 +354,11 @@ impl Vst3Plugin for Dawsend {
 }
 
 nih_export_clap!(Dawsend);
-nih_export_vst3!(Dawsend);
+// Le point-virgule en cause est dans la macro `vtable` de vst3-com (dépendance de
+// nih-plug), pas dans ce code : Rust 1.100 le signale, on ne peut pas le corriger ici.
+#[allow(semicolon_in_expressions_from_non_local_macros)]
+mod vst3_export {
+    use super::Dawsend;
+    use nih_plug::nih_export_vst3;
+    nih_export_vst3!(Dawsend);
+}

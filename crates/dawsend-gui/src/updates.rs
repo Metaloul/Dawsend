@@ -37,6 +37,9 @@ pub struct UpdateInfo {
 pub struct UpdateStatus {
     /// Une clé publique est intégrée : les mises à jour sont possibles.
     pub enabled: bool,
+    /// Version portable : « Télécharger » ouvre la page de la release au lieu
+    /// d'installer.
+    pub portable: bool,
     pub checking: bool,
     pub available: Option<UpdateInfo>,
     /// Dernière vérification réussie (secondes depuis 1970).
@@ -64,12 +67,12 @@ fn now_secs() -> u64 {
 }
 
 impl Updates {
-    pub fn new() -> Self {
+    pub fn new(portable: bool) -> Self {
         let u = Self::default();
-        u.status
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .enabled = pubkey().is_some();
+        u.set(|s| {
+            s.enabled = pubkey().is_some();
+            s.portable = portable;
+        });
         u
     }
 

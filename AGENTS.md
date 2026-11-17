@@ -183,9 +183,10 @@ Familjen Grotesk et Geist Mono). La maquette de référence est dans Figma (fich
 1. Monter `version` dans `Cargo.toml` (`[workspace.package]`).
 2. Ajouter `## X.Y.Z` en tête de `CHANGELOG.md`.
 3. Pousser le tag `vX.Y.Z` : `.github/workflows/release.yml` vérifie que le tag
-   correspond à la version, teste, construit l'installateur, le signe
-   (`tauri signer sign`), écrit `latest.json` et `SHA256SUMS.txt`, publie la release
-   et l'envoie à VirusTotal si `VT_API_KEY` est configuré.
+   correspond à la version, teste, construit l'installateur et le zip portable, signe
+   l'installateur (`tauri signer sign`), écrit `latest.json` et `SHA256SUMS.txt`,
+   publie la release et envoie l'installateur et le zip à VirusTotal si `VT_API_KEY`
+   est configuré.
 
 L'appli lit `https://github.com/Metaloul/Dawsend/releases/latest/download/latest.json`
 (clés de plateforme `windows-x86_64` et `windows-x86_64-nsis`). Elle installe en
@@ -194,7 +195,17 @@ mode silencieux : l'installateur reçoit `/S /UPDATE`, garde les choix précéde
 d'installer tant qu'un plugin est chargé dans un DAW (Windows ne remplace pas un
 `.vst3` ouvert).
 
+**Version portable** (`Dawsend-X.Y.Z-portable.zip`, faite par `installer/build.ps1`) :
+les fichiers de l'installateur plus `installer/portable.txt`. La présence de ce
+fichier à côté de `dawsend.exe` (`crates/dawsend-gui/src/portable.rs`) range réglages
+et journaux dans `data\` à côté de l'exécutable, et le bouton de mise à jour ouvre la
+page de la release au lieu de lancer l'installateur.
+
 ## 9. Pièges connus
+
+- **La CI prend le Rust stable du moment**, plus récent que celui du poste : un
+  nouveau lint de clippy peut la faire échouer sans changement de code. Garder la
+  toolchain locale à jour (`rustup update stable`) avant de pousser.
 
 - **`installer/dawsend.nsi` est en CRLF avec BOM UTF-8.** Le garder tel quel (en
   Python : `open(..., newline="")`). Le vérifier avec

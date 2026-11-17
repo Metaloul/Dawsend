@@ -6,11 +6,15 @@ const fr = {
   updAvailable: "Dawsend {v} est disponible",
   updNotes: "Nouveautés",
   updInstall: "Installer",
+  updDownload: "Télécharger",
+  updPortable:
+    "Version portable : la page de téléchargement s'ouvre. Quitte Dawsend, puis remplace les fichiers du dossier par ceux du nouveau zip (garde le dossier data).",
   updDownloading: "Téléchargement… {pct}",
   updDawOpen:
     "Ferme d'abord ton DAW (ou retire Dawsend de tes pistes) : Windows ne peut pas remplacer un plugin chargé.",
   updUac: "Windows va demander l'autorisation d'installer. Dawsend se relance ensuite tout seul.",
   updVersion: "Version installée",
+  updVersionPortable: "Version portable",
   updCheck: "Vérifier",
   updChecking: "Vérification…",
   updUpToDate: "Dawsend est à jour (vérifié à {time}).",
@@ -80,11 +84,15 @@ const en = {
   updAvailable: "Dawsend {v} is available",
   updNotes: "What's new",
   updInstall: "Install",
+  updDownload: "Download",
+  updPortable:
+    "Portable version: the download page opens. Quit Dawsend, then replace the files in the folder with those from the new zip (keep the data folder).",
   updDownloading: "Downloading… {pct}",
   updDawOpen:
     "Close your DAW first (or remove Dawsend from your tracks): Windows cannot replace a loaded plugin.",
   updUac: "Windows will ask for permission to install. Dawsend then restarts by itself.",
   updVersion: "Installed version",
+  updVersionPortable: "Portable version",
   updCheck: "Check",
   updChecking: "Checking…",
   updUpToDate: "Dawsend is up to date (checked at {time}).",
