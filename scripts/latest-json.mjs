@@ -14,13 +14,15 @@ if (!version || !installer || !sigPath) {
 }
 
 // Section « ## X.Y.Z … » de CHANGELOG.md, jusqu'au titre suivant.
-const changelog = readFileSync("CHANGELOG.md", "utf8").replace(/\r\n/g, "\n");
-const start = changelog.search(new RegExp(`^## ${version.replace(/\./g, "\.")}\b.*$`, "m"));
+// Titre accepté : « ## 0.1.0 » ou « ## 0.1.0 (date) », pas « ## 0.1.0-beta ».
+const lines = readFileSync("CHANGELOG.md", "utf8").split(/\r?\n/);
+const heading = `## ${version}`;
+const start = lines.findIndex((l) => l.trimEnd() === heading || l.startsWith(`${heading} `));
 if (start < 0) {
   console.error(`CHANGELOG.md n'a pas de section « ## ${version} » : pas de release sans changelog.`);
   process.exit(1);
 }
-const rest = changelog.slice(start).split("\n").slice(1);
+const rest = lines.slice(start + 1);
 const end = rest.findIndex((l) => l.startsWith("## "));
 const notes = (end < 0 ? rest : rest.slice(0, end)).join("\n").trim();
 
