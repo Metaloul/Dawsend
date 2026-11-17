@@ -190,10 +190,12 @@
           {#if upd.downloading}
             <span class="mono pct">{t("updDownloading", { pct: progress(upd.downloading) })}</span>
           {:else}
-            <button class="primary" disabled={installing} onclick={installUpdate}>{t("updInstall")}</button>
+            <button class="primary" disabled={installing} onclick={installUpdate}>
+              {upd.portable ? t("updDownload") : t("updInstall")}
+            </button>
           {/if}
         </div>
-        <p class="hint" class:warn={updError}>{updError ?? t("updUac")}</p>
+        <p class="hint" class:warn={updError}>{updError ?? (upd.portable ? t("updPortable") : t("updUac"))}</p>
         {#if upd.available.notes}
           <details>
             <summary>{t("updNotes")}</summary>
@@ -323,7 +325,7 @@
           <div class="group">
             <div class="row">
               <div class="line">
-                <span>{t("updVersion")}</span>
+                <span>{upd?.portable ? t("updVersionPortable") : t("updVersion")}</span>
                 <span class="ver">
                   <span class="mono">v{st.version}</span>
                   <button disabled={!upd?.enabled || upd?.checking} onclick={checkUpdates}>

@@ -141,7 +141,10 @@ where
                 let n = (total - done).min(CHUNK_FRAMES);
                 renderer.render(&mut scratch[..n * 2], n);
                 let dst = &mut data[done * channels..(done + n) * channels];
-                for (frame, src) in dst.chunks_exact_mut(channels).zip(scratch.chunks_exact(2)) {
+                for (frame, src) in dst
+                    .chunks_exact_mut(channels)
+                    .zip(scratch.as_chunks::<2>().0)
+                {
                     if channels == 1 {
                         frame[0] = T::from_sample((src[0] + src[1]) * 0.5);
                     } else {
