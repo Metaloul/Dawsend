@@ -1227,7 +1227,7 @@ checksum = "0c87e182de0887fd5361989c677c4e8f5000cd9491d6d563161a8f3a5519fc7f"
 
 [[package]]
 name = "dawsend-app"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "audioadapter-buffers",
  "cpal",
@@ -1241,7 +1241,7 @@ dependencies = [
 
 [[package]]
 name = "dawsend-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "libc",
  "windows-sys 0.61.2",
@@ -1249,7 +1249,7 @@ dependencies = [
 
 [[package]]
 name = "dawsend-gui"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "dawsend-app",
  "log",
@@ -1267,7 +1267,7 @@ dependencies = [
 
 [[package]]
 name = "dawsend-plugin"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "dawsend-core",
  "nih_plug",
@@ -7069,7 +7069,7 @@ checksum = "b9cc00251562a284751c9973bace760d86c0276c471b4be569fe6b068ee97a56"
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "nih_plug_xtask",
 ]

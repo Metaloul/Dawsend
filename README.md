@@ -378,6 +378,9 @@ Testing without a DAW: `dawsend-console sine --name Guitar`, then the app.
    and `SHA256SUMS.txt`, publishes the release, attaches its SLSA provenance and has it
    scanned by VirusTotal.
 
+To check a build and its VirusTotal verdict without publishing anything, run the
+Release workflow by hand with **publier** unchecked.
+
 Repository secrets: `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
 (private signing key and its password), optionally `VT_API_KEY`.
 

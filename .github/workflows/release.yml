@@ -5,6 +5,9 @@
 # Lancement : pousser un tag « vX.Y.Z » égal à la version de Cargo.toml, ou lancer le
 # workflow à la main depuis l'onglet Actions.
 #
+# Release à blanc : lancement à la main avec « publier » décoché. Tout est construit,
+# signé et envoyé à VirusTotal (verdict dans le résumé du run), mais rien n'est publié.
+#
 # Secrets du dépôt :
 #   TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD  (obligatoires)
 #   VT_API_KEY  (facultatif : analyse VirusTotal des fichiers publiés)
@@ -17,6 +20,11 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      publier:
+        description: Publier la release (décoché = à blanc, pour vérifier le build et VirusTotal)
+        type: boolean
+        default: true
 
 # Droits minimaux par défaut ; chaque job demande ce dont il a besoin.
 permissions:
@@ -127,6 +135,7 @@ jobs:
           "hashes=" + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($txt)) >> $env:GITHUB_OUTPUT
 
       - name: Release GitHub
+        if: github.event_name == 'push' || inputs.publier
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -151,10 +160,53 @@ jobs:
             target/installer/Dawsend-Setup-*.exe
             target/installer/Dawsend-*-portable.zip
 
+      # Attend la fin de chaque analyse (API v3 : GET /analyses/<id>) et écrit le
+      # verdict dans le journal et le résumé du run. Ne fait jamais échouer le job :
+      # en release normale, les fichiers sont déjà publiés.
+      - name: Verdict VirusTotal
+        if: steps.virustotal.outputs.analysis != ''
+        shell: pwsh
+        env:
+          ANALYSIS: ${{ steps.virustotal.outputs.analysis }}
+        run: |
+          $deadline = (Get-Date).AddMinutes(20)
+          $lines = @("### Verdict VirusTotal", "", "| Fichier | Malveillant | Suspect | Sans détection | Rapport |", "| --- | --- | --- | --- | --- |")
+          foreach ($pair in $env:ANALYSIS -split ',') {
+            $name, $url = $pair -split '=', 2
+            $id = $url -replace '^.*/file-analysis/([^/]+)/.*$', '$1'
+            do {
+              Start-Sleep -Seconds 30
+              try {
+                $a = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/analyses/$id" -Headers @{ 'x-apikey' = $env:VT_API_KEY }
+                $status = $a.data.attributes.status
+              } catch {
+                $status = "erreur : $($_.Exception.Message)"
+              }
+              "$name : $status"
+            } while ($status -ne 'completed' -and (Get-Date) -lt $deadline)
+            if ($status -ne 'completed') {
+              "::warning::VirusTotal n'a pas fini d'analyser $name en 20 minutes"
+              $lines += "| $name | ? | ? | ? | [analyse en cours]($url) |"
+              continue
+            }
+            $s = $a.data.attributes.stats
+            $lines += "| $name | $($s.malicious) | $($s.suspicious) | $($s.undetected + $s.harmless) | [rapport]($url) |"
+            $a.data.attributes.results.PSObject.Properties |
+              Where-Object { $_.Value.category -in 'malicious', 'suspicious' } |
+              ForEach-Object {
+                $msg = "$name : $($_.Name) ($($_.Value.category)) : $($_.Value.result)"
+                "::warning::$msg"
+                $lines += "- $msg"
+              }
+          }
+          $out = $lines -join "`n"
+          $out
+          $out >> $env:GITHUB_STEP_SUMMARY
+
       # Ajoute le lien du rapport VirusTotal aux notes de la release (sortie
       # « fichier=adresse » de l'action, séparée par des virgules).
       - name: Rapport VirusTotal dans les notes
-        if: steps.virustotal.outputs.analysis != ''
+        if: steps.virustotal.outputs.analysis != '' && (github.event_name == 'push' || inputs.publier)
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}

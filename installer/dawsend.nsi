@@ -71,7 +71,7 @@ Var IsUpdate
 
 Function .onInit
   ${IfNot} ${RunningX64}
-    MessageBox MB_OK|MB_ICONSTOP "Dawsend nécessite une version 64 bits de Windows."
+    MessageBox MB_OK|MB_ICONSTOP "Dawsend nécessite une version 64 bits de Windows." /SD IDOK
     Abort
   ${EndIf}
   SetRegView 64
@@ -83,7 +83,9 @@ Function .onInit
     StrCpy $IsUpdate 1
     Call KeepPreviousChoices
   ${EndIf}
-  ; Windows 11 et Windows 10 à jour ont WebView2 ; sinon, prévenir.
+  ; Windows 11 et Windows 10 à jour ont WebView2 ; sinon, prévenir. En mode silencieux
+  ; (/S : winget, mises à jour), pas de question : on installe quand même (/SD IDYES),
+  ; sans quoi la boîte de dialogue bloquerait l'installation.
   ReadRegStr $0 HKLM "${WEBVIEW2_KEY}" "pv"
   ${If} $0 == ""
     ReadRegStr $0 HKLM "SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" "pv"
@@ -92,7 +94,7 @@ Function .onInit
     ReadRegStr $0 HKCU "${WEBVIEW2_KEY}" "pv"
   ${EndIf}
   ${If} $0 == ""
-    MessageBox MB_YESNO|MB_ICONEXCLAMATION "La fenêtre de Dawsend a besoin de Microsoft Edge WebView2, qui ne semble pas installé.$\r$\n$\r$\nInstalle-le depuis https://developer.microsoft.com/microsoft-edge/webview2/ (programme « Evergreen Bootstrapper »).$\r$\n$\r$\nContinuer quand même ?" IDYES +2
+    MessageBox MB_YESNO|MB_ICONEXCLAMATION "La fenêtre de Dawsend a besoin de Microsoft Edge WebView2, qui ne semble pas installé.$\r$\n$\r$\nInstalle-le depuis https://developer.microsoft.com/microsoft-edge/webview2/ (programme « Evergreen Bootstrapper »).$\r$\n$\r$\nContinuer quand même ?" /SD IDYES IDYES +2
     Abort
   ${EndIf}
 FunctionEnd

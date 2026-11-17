@@ -193,6 +193,10 @@ Familjen Grotesk et Geist Mono). La maquette de référence est dans Figma (fich
    publie la release et envoie l'installateur et le zip à VirusTotal si `VT_API_KEY`
    est configuré.
 
+Avant une release, on peut la lancer **à blanc** : workflow Release lancé à la main
+(`gh workflow run release.yml --ref main -f publier=false`). Il construit, signe et
+envoie à VirusTotal, écrit le verdict dans le résumé du run, et ne publie rien.
+
 Pour gagner du temps, attendre que la CI de `main` soit verte avant de pousser le tag :
 la release saute alors ses tests (étape « CI de ce commit »), sinon elle les relance.
 
