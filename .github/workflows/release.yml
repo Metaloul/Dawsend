@@ -57,6 +57,12 @@ jobs:
         run: |
           if (-not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) { choco install nsis -y --no-progress }
 
+      # L'appli Tauri intègre ui/dist à la compilation : l'interface d'abord.
+      - name: Interface
+        run: |
+          pnpm --dir ui install --frozen-lockfile
+          pnpm --dir ui build
+
       - name: Tests
         run: cargo test --workspace --locked
 
