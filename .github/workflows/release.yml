@@ -173,6 +173,7 @@ jobs:
           $lines = @("### Verdict VirusTotal", "", "| Fichier | Malveillant | Suspect | Sans détection | Rapport |", "| --- | --- | --- | --- | --- |")
           foreach ($pair in $env:ANALYSIS -split ',') {
             $name, $url = $pair -split '=', 2
+            $name = Split-Path -Leaf $name
             $id = $url -replace '^.*/file-analysis/([^/]+)/.*$', '$1'
             do {
               Start-Sleep -Seconds 30
@@ -215,7 +216,7 @@ jobs:
           $v = "${{ steps.version.outputs.version }}"
           $links = $env:ANALYSIS -split ',' | ForEach-Object {
             $name, $url = $_ -split '=', 2
-            "- [$name]($url)"
+            "- [$(Split-Path -Leaf $name)]($url)"
           }
           $body = (Get-Content target/installer/release-notes.md -Raw) + "`n### Analyse antivirus`n`n" + ($links -join "`n") + "`n"
           Set-Content -Path target/installer/release-notes.md -Value $body -Encoding utf8
