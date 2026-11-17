@@ -200,7 +200,12 @@ impl Consumer {
         let ring = self.region.ring(self.index);
         let r = self.read_pos;
         let load = |a: &AtomicU32| f32::from_bits(a.load(Ordering::Relaxed));
-        for (i, out) in dst[..frames * 2].chunks_exact_mut(2).enumerate() {
+        for (i, out) in dst[..frames * 2]
+            .as_chunks_mut::<2>()
+            .0
+            .iter_mut()
+            .enumerate()
+        {
             let pos = r + i as u64;
             let l = load(&ring[sample_index(pos, 0)]);
             let rr = if self.channels >= 2 {
@@ -343,7 +348,7 @@ mod tests {
             match cons.read_stereo(&mut buf, 256) {
                 Ok(()) => {
                     let first = buf[0];
-                    for (i, fr) in buf.chunks_exact(2).enumerate() {
+                    for (i, fr) in buf.as_chunks::<2>().0.iter().enumerate() {
                         assert_eq!(fr[0], first + i as f32, "trame déchirée");
                         assert_eq!(fr[1], -fr[0]);
                     }
