@@ -4,8 +4,10 @@ DAWSEND — mode d'emploi
 Dawsend envoie le son de ton DAW (ASIO) vers une sortie Windows normale, pour que
 le partage d'écran (Discord, etc.) l'entende, sans OBS ni câble audio virtuel.
 
-Version prototype (étape 1) : l'appli est une fenêtre de console et joue une seule
-source à la fois.
+Il y a deux morceaux :
+- le plugin « Dawsend » (VST3 / CLAP), à mettre en insert sur une piste du DAW ;
+- l'appli « Dawsend », qui tourne près de l'horloge (zone de notification) et joue
+  le son des plugins sur la sortie Windows.
 
 
 1. DANS STUDIO ONE
@@ -13,28 +15,39 @@ source à la fois.
 - Ajoute « Dawsend » (catégorie Fx / Tools) en insert sur ta piste guitare, en
   dernier dans la chaîne si tu veux envoyer le son traité. Le son de la piste
   n'est pas modifié.
+- Ouvre le plugin : le voyant indique si tout est relié.
+    vert   « Relié — l'appli joue cette piste » : le son part bien vers Windows ;
+    orange « Appli ouverte — piste non jouée » ou « piste coupée dans l'appli » :
+           active ou réactive la source dans l'appli ;
+    rouge  « Appli Dawsend fermée » : lance l'appli, la liaison se fait seule ;
+    gris   « En attente du moteur audio » : démarre le moteur audio du DAW.
+  Le bouton « Envoi » du plugin, éteint, envoie du silence à l'appli.
+- Tu peux renommer la source dans le plugin (« Guitare », « Voix »…). Le nom est
+  sauvegardé avec le projet.
 - S'il n'apparaît pas : Studio One > Options > Emplacements > Plug-ins VST,
   réinitialise la liste noire puis relance Studio One.
-- Les sources s'appellent « Dawsend 1 », « Dawsend 2 »… dans l'ordre d'ajout. Le nom
-  est sauvegardé avec le projet.
 
 
-2. LANCER DAWSEND
------------------
-Menu Démarrer > Dawsend > « Dawsend ». La fenêtre affiche la source jouée puis,
-chaque seconde, le remplissage du buffer et les compteurs d'incidents.
-Ferme la fenêtre (ou Ctrl+C) pour arrêter.
+2. L'APPLI DAWSEND
+------------------
+Elle démarre avec Windows (si tu as gardé l'option) et se range dans la zone de
+notification, près de l'horloge. Clic sur son icône : la fenêtre s'ouvre.
+Fermer la fenêtre ne quitte pas Dawsend. Pour quitter : clic droit sur l'icône,
+« Quitter Dawsend ».
 
-Autres raccourcis :
-- « Dawsend - liste des sources » : affiche les sources publiées par les plugins.
-- « Dawsend - bip de test » : publie un bip, pour tester sans DAW (lance-le, puis
-  lance « Dawsend » : tu dois entendre un bip toutes les secondes).
+Onglet « Sources » : une carte par plugin, avec un interrupteur pour la jouer ou
+non, un bouton Couper, un volume et un vumètre. En haut, la sortie utilisée, le
+volume général et le bouton qui coupe tout.
 
-Options avancées (dans un terminal, dossier C:\Program Files\Dawsend) :
-  dawsend-console play --source "Dawsend 2"     joue une source précise
-  dawsend-console play --device "Haut-parleurs" choisit la sortie (partie du nom)
-  dawsend-console play --latency 20             marge du buffer en ms (10 par défaut)
-  dawsend-console devices                       liste les sorties audio
+Onglet « Réglages » :
+- Sortie audio : garde « Sortie de Windows (par défaut) » sauf besoin particulier.
+- Marge de sécurité : plus petite = moins de décalage, plus grande = moins de
+  risque de coupure. Dawsend l'augmente tout seul si le DAW envoie de gros blocs.
+- Langue, démarrage avec Windows, journaux (bouton pour ouvrir le dossier, case
+  « journal détaillé » pour un dépannage).
+
+Menu de l'icône (clic droit) : ouvrir, couper le son, choisir les sources jouées
+et la sortie, démarrage avec Windows, quitter.
 
 
 3. DISCORD
@@ -43,10 +56,12 @@ Partage l'ÉCRAN ENTIER avec le son. En partageant seulement la fenêtre de Stud
 Discord ne capte que le son de Studio One, et pas celui de Dawsend.
 
 
-4. FRÉQUENCES
--------------
+4. FRÉQUENCES ET HORLOGES
+-------------------------
 Toutes les fréquences sont prises en charge (44,1 / 48 / 88,2 / 96 / 176,4 / 192 kHz
 et au-delà), côté DAW comme côté Windows, dans n'importe quelle combinaison.
+L'écart d'horloge entre la carte ASIO et la sortie Windows est compensé en continu
+(la « dérive » affichée sous chaque source, en ppm).
 
 
 5. DÉPANNAGE
@@ -55,13 +70,25 @@ et au-delà), côté DAW comme côté Windows, dans n'importe quelle combinaison
 - Source « en pause » : Studio One ne fait pas tourner le plugin (piste désactivée,
   moteur audio arrêté).
 - Guitare entendue en double avec un petit écho : le son ASIO et la sortie Windows
-  arrivent dans le même casque. Choisis une autre sortie avec --device.
-- Craquements, underruns qui augmentent : augmente la marge (--latency 20). Elle doit
-  dépasser la taille du buffer ASIO (1 024 échantillons à 48 kHz = 21 ms).
-- Petite coupure toutes les quelques minutes : dérive d'horloge entre la carte ASIO
-  et Windows, normal dans ce prototype (corrigé à l'étape suivante).
+  arrivent dans le même casque. Choisis une autre sortie dans les réglages.
+- Craquements, compteur « coupures » qui augmente : augmente la marge de sécurité.
 - « mémoire partagée incompatible » : le plugin et l'appli ne sont pas de la même
   version. Réinstalle, puis relance Studio One.
+- Journaux : Réglages > « Ouvrir le dossier des journaux »
+  (%LOCALAPPDATA%\com.metaloul.dawsend\logs). Réglages enregistrés dans
+  %APPDATA%\com.metaloul.dawsend\settings.json.
+
+
+6. OUTILS EN LIGNE DE COMMANDE
+------------------------------
+dawsend-console.exe (dossier C:\Program Files\Dawsend) sert aux tests :
+  dawsend-console list                          liste les sources publiées
+  dawsend-console devices                       liste les sorties audio
+  dawsend-console sine --name Test              publie un bip, comme le ferait le plugin
+  dawsend-console play                          joue sans fenêtre (ne pas lancer en
+                                                même temps que l'appli Dawsend)
+Raccourcis du menu Démarrer : « Dawsend - liste des sources », « Dawsend - bip de
+test ».
 
 
 Code source sous licence MIT (LICENSE.txt). Le plugin VST3 est distribué sous GPLv3

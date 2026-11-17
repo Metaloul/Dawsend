@@ -1,3 +1,8 @@
 /target
 **/node_modules
 installer/staging/
+/ui/dist
+/crates/dawsend-gui/gen
+
+# Clés privées de signature : jamais dans le dépôt
+*.key

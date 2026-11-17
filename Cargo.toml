@@ -1,19 +1,26 @@
 [workspace]
 resolver = "3"
-members = ["crates/dawsend-core", "crates/dawsend-plugin", "crates/dawsend-app", "xtask"]
+members = [
+    "crates/dawsend-core",
+    "crates/dawsend-plugin",
+    "crates/dawsend-app",
+    "crates/dawsend-gui",
+    "xtask",
+]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
 authors = ["Romain Rousseau (Metaloul)"]
 license = "MIT"
-repository = "https://github.com/metaloul/dawsend"
-rust-version = "1.85"
+repository = "https://github.com/Metaloul/Dawsend"
+rust-version = "1.93"
 
 [workspace.dependencies]
 dawsend-core = { path = "crates/dawsend-core" }
 # nih-plug n'est pas publié sur crates.io : épinglé sur un commit précis.
 nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "de421011f41a6d10fc8c7a6084e4f4dee0143683" }
+nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "de421011f41a6d10fc8c7a6084e4f4dee0143683" }
 nih_plug_xtask = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "de421011f41a6d10fc8c7a6084e4f4dee0143683" }
 
 [profile.release]
@@ -25,3 +32,8 @@ strip = "symbols"
 inherits = "release"
 debug = true
 strip = "none"
+
+# Le rééchantillonneur est très lent sans optimisation : les tests le font tourner sur
+# des minutes d'audio simulé.
+[profile.dev.package.rubato]
+opt-level = 3

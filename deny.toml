@@ -1,0 +1,67 @@
+# Règles de cargo-deny : failles connues (RustSec), licences compatibles, doublons et
+# provenance des dépendances. Lancement : cargo deny check
+[graph]
+all-features = false
+
+[advisories]
+# Failles et crates abandonnés signalés par la base RustSec.
+yanked = "deny"
+# Crates signalés « plus maintenus » (pas de faille connue), tous tirés indirectement
+# par nos dépendances : ils partiront quand celles-ci les remplaceront.
+ignore = [
+    { id = "RUSTSEC-2024-0370", reason = "proc-macro-error : via gtk/glib (Linux, Tauri), à la compilation seulement" },
+    { id = "RUSTSEC-2024-0375", reason = "atty : via nih_log (nih-plug)" },
+    { id = "RUSTSEC-2026-0192", reason = "ttf-parser : via ab_glyph/epaint (egui du plugin), lit nos propres polices" },
+    { id = "RUSTSEC-2026-0370", reason = "zvariant : via zbus (Linux, plugins Tauri), pas utilisé sous Windows" },
+    { id = "RUSTSEC-2026-0371", reason = "zbus_names : via zbus (Linux, plugins Tauri)" },
+    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive : via zbus (Linux, plugins Tauri)" },
+]
+
+[licenses]
+confidence-threshold = 0.9
+# Licences compatibles avec la distribution de Dawsend (code MIT, VST3 en GPLv3).
+allow = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-1-Clause",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+    "CC0-1.0",
+    "BSL-1.0",
+    "MPL-2.0",
+    "OFL-1.1",
+    "Ubuntu-font-1.0",
+    "CDLA-Permissive-2.0",
+    "GPL-3.0-only",
+]
+private = { ignore = true }
+
+# vst3-sys déclare « GPLv3 », qui n'est pas un identifiant SPDX.
+[[licenses.clarify]]
+crate = "vst3-sys"
+expression = "GPL-3.0-only"
+license-files = []
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-git = [
+    # nih-plug et ses dépendances ne sont pas publiés sur crates.io.
+    "https://github.com/robbert-vdh/nih-plug.git",
+    "https://github.com/RustAudio/baseview.git",
+    "https://github.com/robbert-vdh/vst3-sys.git",
+    "https://github.com/robbert-vdh/rust-assert-no-alloc.git",
+    "https://github.com/micahrj/clap-sys.git",
+    "https://github.com/BillyDM/egui-baseview.git",
+    "https://github.com/nicokoch/reflink.git",
+]

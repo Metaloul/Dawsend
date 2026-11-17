@@ -61,7 +61,7 @@ Dawsend/
 │  │     │  └─ unix.rs         #   shm_open / mmap (Linux et macOS)
 │  │     ├─ clock.rs           # horloge monotone en ns, commune aux processus (QPC / CLOCK_MONOTONIC)
 │  │     └─ process.rs         # « ce PID est-il vivant ? » (+ heure de création, contre la réutilisation de PID)
-│  ├─ dawsend-plugin/          # nih-plug, export VST3 + CLAP, GUI nih_plug_egui
+│  ├─ dawsend-plugin/          # nih-plug, export VST3 + CLAP, GUI nih_plug_egui (editor.rs, i18n.rs)
 │  └─ dawsend-app/
 │     ├─ src/
 │     │  ├─ engine/            # indépendant de la plateforme
@@ -73,14 +73,18 @@ Dawsend/
 │     │  │  ├─ mod.rs          #   trait AudioOutput
 │     │  │  ├─ cpal.rs         #   Windows (WASAPI partagé) et macOS (CoreAudio)
 │     │  │  └─ pipewire.rs     #   Linux : nœud PipeWire nommé « Dawsend »
-│     │  ├─ settings.rs        # JSON dans %APPDATA%\Dawsend (et équivalents)
-│     │  └─ bin/dawsend-console.rs   # appli console de l'étape 1
-│     └─ ui/                   # Svelte (étape 4) ; dawsend-app devient la crate Tauri
+│     │  ├─ service.rs         # Engine : thread de contrôle, réglages, vue publiée à l'interface
+│     │  └─ bin/dawsend-console.rs   # outil en ligne de commande (tests, diagnostic)
+│  └─ dawsend-gui/             # appli Tauri 2 (binaire « dawsend ») : fenêtre, zone de notification,
+│                              # réglages (settings.rs), textes du menu (i18n.rs), journaux
+├─ ui/                         # interface Svelte 5 (Vite) de l'appli, compilée dans ui/dist
+└─ assets/                     # logo, wordmark, icône de la zone de notification, bandeau du plugin
 ```
 
-`dawsend-app` contient une **bibliothèque** (le moteur) et plusieurs binaires : la
-console des étapes 1 à 3, puis l'appli Tauri à partir de l'étape 4. Le moteur
-ne connaît pas Tauri, ce qui permet de le tester sous Linux sans interface.
+`dawsend-app` contient une **bibliothèque** (le moteur et le service `Engine`) et
+l'outil `dawsend-console`. L'appli Tauri vit dans sa propre crate, `dawsend-gui`,
+qui n'utilise que l'API publique du moteur. Le moteur ne connaît pas Tauri, ce qui
+permet de le tester sans interface.
 
 ## 3. Format de la mémoire partagée (v1)
 
@@ -283,7 +287,7 @@ Dans l'autre sens, le plugin affiche :
 |---|---|---|
 | **Callback de sortie** (créé par cpal / WASAPI, priorité haute) | pour chaque source : lecture du ring, rééchantillonnage, gain, mix, limitation douce et vumètres. Aucune allocation, aucun verrou. | à chaque période WASAPI (environ 10 ms) |
 | **Contrôle** | découverte des slots, heartbeat de l'appli, détection des sources mortes, création des lecteurs (allocation ici), envoi au callback par une file lock-free (`rtrb`), sauvegarde des réglages | 10 Hz |
-| **Interface** Tauri | fenêtre et icône de la barre des tâches. Vumètres envoyés à 30 Hz, **uniquement quand la fenêtre est visible** | à la demande |
+| **Interface** Tauri | fenêtre et icône de la zone de notification. La fenêtre interroge l'état (`get_state`) toutes les 100 ms, **uniquement quand elle est visible** ; le menu de l'icône est reconstruit seulement quand son contenu change (vérifié chaque seconde) | à la demande |
 
 Pour garder le CPU quasi nul au repos : le flux de sortie est mis en pause quand
 aucune source n'est active depuis 5 s. Il ne reste alors que le thread de
@@ -311,15 +315,30 @@ fixe en sortie, buffers préalloués, `process_into_buffer` sans allocation).
 - **Sous-alimentation** (`F` < besoin du callback) : fondu de sortie vers le
   silence, retour en amorçage, compteur d'underruns incrémenté. On n'entend
   qu'un trou, jamais un craquement.
-- **Dépassement** (`F` > `T` + 3 blocs, ou données écrasées) : saut de `read_pos`
-  à `write_pos − T`, avec un fondu croisé court.
+- **Dépassement** : saut de `read_pos` à `write_pos − T`, avec un fondu croisé de
+  10 ms. Tout de suite si le retard dépasse `T` de plus de max(40 ms, 3 × dent de
+  scie) ; après 0,3 s si le remplissage lissé dépasse `T` de plus de 6 ms (sortie
+  figée par un pic de charge, DAW qui rattrape, marge qui redescend). Sans ce
+  retour rapide, le régulateur résorberait le retard à 1 ms par seconde au plus.
+- **Marge adaptative et pics du DAW** : la profondeur de la dent de scie est
+  mesurée par fenêtres de 0,5 s, sur 4 s d'historique. Pendant les 4 premières
+  secondes d'une source, le plus grand creux compte (adaptation immédiate aux gros
+  blocs) ; ensuite, le deuxième plus grand. Un gros bloc creuse chaque fenêtre et
+  relève donc la marge ; un pic isolé du DAW (une seule fenêtre) ne la relève pas.
+  Une coupure (underrun) compte comme un creux de la marge plus le manque.
+- **Anti-emballement** : l'erreur intégrée par le PI est bornée à ±2 ms, si bien
+  qu'un transitoire (pic, resynchro, changement de marge) ne fausse pas
+  l'estimation de la dérive.
+- **Priorité** : le thread de sortie de cpal est promu en temps réel (fonctionnalité
+  `realtime` de cpal, MMCSS sous Windows via `audio_thread_priority`). Un refus est
+  journalisé et le son continue en priorité normale.
 
 ### 5.3 Budget de latence (48 kHz, buffer ASIO de 128)
 
 | Étape | Latence |
 |---|---:|
 | Bloc ASIO (le plugin écrit en fin de bloc) | 2,7 ms |
-| Cible du ring (réglable de 5 à 50 ms, **10 ms par défaut**) | 10 ms |
+| Cible du ring (réglable de 3 à 50 ms dans l'appli, **10 ms par défaut**) | 10 ms |
 | Délai du rééchantillonneur sinc | ~1 ms |
 | WASAPI partagé (période + moteur Windows) | ~10 à 13 ms |
 | **Total** | **~24 à 27 ms** |
@@ -338,15 +357,46 @@ aussi la latence totale estimée.
 
 ### 5.5 Réglages et intégration système
 
-- Fichier `settings.json` dans `%APPDATA%\Dawsend\` (`~/.config/dawsend/` sous
-  Linux, `~/Library/Application Support/Dawsend/` sous macOS).
+- Fichier `settings.json` dans le dossier de configuration de l'appli
+  (identifiant `com.metaloul.dawsend`) : `%APPDATA%\com.metaloul.dawsend\` sous
+  Windows, `~/.config/com.metaloul.dawsend/` sous Linux,
+  `~/Library/Application Support/com.metaloul.dawsend/` sous macOS. Écriture
+  atomique (fichier temporaire, `sync`, renommage) ; un fichier illisible est mis
+  de côté en `.json.bak`.
+- Journaux (`tauri-plugin-log`) : `%LOCALAPPDATA%\com.metaloul.dawsend\logs\dawsend.log`
+  sous Windows, 2 Mo par fichier, 5 fichiers gardés, heure locale. L'interface
+  écrit dans le même journal. Niveau `info` par défaut, `debug` avec la case
+  « Journal détaillé » (sans redémarrage).
+- Langue : français ou anglais, « auto » = langue du système (`sys-locale`).
+  Le plugin suit toujours la langue du système.
 - Une seule instance de l'appli à la fois (`tauri-plugin-single-instance`).
-- Démarrage avec Windows : `tauri-plugin-autostart`, qui utilise la clé
-  `HKCU\…\Run`, sans droits administrateur.
+- Démarrage avec Windows : `tauri-plugin-autostart`, valeur `Dawsend` de la clé
+  `HKCU\…\Run` (la même que celle écrite par l'installateur), avec l'argument
+  `--minimized` : l'appli démarre alors dans la zone de notification, sans fenêtre.
 - Périphérique de sortie mémorisé par nom, avec retour à la sortie par défaut
   si ce périphérique a disparu.
 - Changement de périphérique ou débranchement : le stream est recréé par le
   thread de contrôle.
+
+### 5.6 Comparaison avec ReaStream (Cockos)
+
+ReaStream (`reastream-standalone.dll`, ReaPlugs x64) a été désassemblé et décompilé
+avec Ghidra 12.1.4 (via REA) le 16/11/2026, pour comparer les choix. Ce qu'on y lit :
+
+| Point | ReaStream | Dawsend |
+|---|---|---|
+| Transport | UDP (port 58710), même en local ; paquets « MRSR » d'environ 1 200 octets d'audio, float 32 bits par canal | Mémoire partagée, un ring par source, aucune copie réseau |
+| Envoi depuis le thread audio | `sendto` appelé **dans `processReplacing`**, plusieurs fois par bloc (un bloc de 512 trames stéréo = 4 paquets), sous deux sections critiques (une par instance, une globale) ; l'adresse de destination est re-résolue à chaque bloc | Écriture dans le ring et quelques atomiques ; aucun verrou ni appel système |
+| Réception | Thread réseau (`select` de 100 ms, `recvfrom`) qui empile les paquets dans une liste globale ; le thread audio prend un verrou global, parcourt la liste, agrandit des tampons (allocations possibles) | Le callback de sortie lit directement les rings, sans verrou ni allocation |
+| Dérive d'horloge | Pas de compensation à fréquence égale : un manque relance un pré-remplissage de deux blocs (coupure audible) ; rééchantillonnage seulement si les fréquences nominales diffèrent | Régulateur PI sur le remplissage (± 1 000 ppm), marge adaptée à la dent de scie, retour rapide après un pic |
+| Plusieurs sources | Oui, distinguées par un identifiant de 32 octets, mixées à la réception | Oui, un slot par source, volumes et coupures dans l'appli |
+| Réseau entre deux PC | Oui (c'est sa raison d'être) | Non : Dawsend reste local |
+
+Conclusion : sur une même machine, le chemin de Dawsend est plus court et plus sûr pour
+le DAW (aucun verrou ni appel système sur le thread audio, alors que ReaStream peut y
+attendre un verrou tenu par son interface ou par son thread réseau, et y fait des
+`sendto`). Rien n'est à reprendre de ReaStream pour l'usage visé. Son seul atout en plus,
+l'envoi vers un autre PC, est hors du cahier des charges.
 
 ## 6. Isolation par plateforme
 

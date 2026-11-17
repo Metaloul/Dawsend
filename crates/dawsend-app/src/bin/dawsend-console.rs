@@ -1,39 +1,67 @@
-//! Appli console Dawsend (étapes 1 à 3) : liste les sources publiées par les plugins
-//! et en joue une sur une sortie audio normale du système.
+//! Appli console Dawsend : liste les sources publiées par les plugins, les joue sur une
+//! sortie audio normale du système, et publie des sources de test.
+//!
+//! Outil de diagnostic : l'appli de tous les jours est l'appli à fenêtre (`dawsend`).
 
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
-use dawsend_app::engine::mixer::{Command, MixerControl, mixer};
-use dawsend_app::engine::source::{SourceKey, SourcePlayer, SourceStats};
 use dawsend_app::output;
-use dawsend_core::layout::CONSUMER_FLAG_LISTENING;
-use dawsend_core::registry::{self, SlotMeta};
-use dawsend_core::{Consumer, LinkStatus, Region, SlotClaim, clock};
+use dawsend_app::service::{Engine, EngineSettings};
+use dawsend_core::registry;
+use dawsend_core::{LinkStatus, Region, SlotClaim, clock};
 
 const USAGE: &str = "\
 Dawsend console — envoie le son des plugins Dawsend vers une sortie audio normale.
 
 UTILISATION :
   dawsend-console play [--source NOM] [--device NOM] [--latency MS]
-      Joue une source (par défaut la première trouvée) sur la sortie choisie
+      Joue les sources (ou seulement celle demandée) sur la sortie choisie
       (par défaut celle de Windows). Ctrl+C pour quitter.
   dawsend-console list
       Liste les sources publiées par les plugins.
   dawsend-console devices
       Liste les périphériques de sortie.
-  dawsend-console sine [--name NOM] [--rate HZ]
-      Publie un bip de test de 440 Hz comme le ferait un plugin (pour tester sans DAW).
+  dawsend-console sine [--name NOM] [--rate HZ] [--freq HZ] [--steady] [--ppm N] [--block N]
+                       [--spike MS [--catch-up]]
+      Publie un bip de test comme le ferait un plugin (pour tester sans DAW).
+      --steady : son continu (sinon 0,5 s sur 1 s) ; --ppm : décale l'horloge du faux
+      DAW de N ppm (test de la compensation de dérive) ; --block : taille des blocs.
 
 OPTIONS :
   --source NOM   nom de la source (insensible à la casse)
   --device NOM   partie du nom du périphérique de sortie
   --latency MS   marge visée dans le buffer, en ms (défaut : 10)
+  -v             affiche aussi le journal détaillé
 ";
 
+/// Journal de la console : sur la sortie d'erreur, détaillé avec `-v`.
+struct StderrLog;
+
+impl log::Log for StderrLog {
+    fn enabled(&self, m: &log::Metadata) -> bool {
+        m.level() <= log::max_level()
+    }
+    fn log(&self, r: &log::Record) {
+        if self.enabled(r.metadata()) {
+            eprintln!("[{}] {}", r.level(), r.args());
+        }
+    }
+    fn flush(&self) {}
+}
+
 fn main() {
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    let mut args: Vec<String> = std::env::args().skip(1).collect();
+    let verbose = args.iter().any(|a| a == "-v");
+    args.retain(|a| a != "-v");
+    let _ = log::set_logger(&StderrLog);
+    log::set_max_level(if verbose {
+        log::LevelFilter::Debug
+    } else {
+        log::LevelFilter::Warn
+    });
+
     let result = match args.first().map(String::as_str) {
         Some("play") => play(&args[1..]),
         Some("list") => list(),
@@ -83,9 +111,13 @@ fn opt<'a>(args: &'a [String], name: &str) -> Result<Option<&'a str>, String> {
     Ok(None)
 }
 
-fn check_args(args: &[String], allowed: &[&str]) -> Result<(), String> {
+/// Vérifie les options ; `flags` sont les options sans valeur.
+fn check_args(args: &[String], allowed: &[&str], flags: &[&str]) -> Result<(), String> {
     let mut it = args.iter();
     while let Some(a) = it.next() {
+        if flags.contains(&a.as_str()) {
+            continue;
+        }
         if !allowed.contains(&a.as_str()) {
             return Err(format!("option inconnue : {a}\n\n{USAGE}"));
         }
@@ -140,187 +172,121 @@ fn devices() -> Result<(), String> {
     Ok(())
 }
 
-/// Choisit la source à jouer : par nom si demandé, sinon la première.
-fn pick_source<'a>(sources: &'a [SlotMeta], wanted: Option<&str>) -> Option<&'a SlotMeta> {
-    match wanted {
-        Some(w) => sources.iter().find(|m| m.name.eq_ignore_ascii_case(w)),
-        None => sources.first(),
-    }
-}
-
-struct Current {
-    key: SourceKey,
-    name: String,
-    stats: Arc<SourceStats>,
-    source_rate: u32,
-}
-
 fn play(args: &[String]) -> Result<(), String> {
-    check_args(args, &["--source", "--device", "--latency"])?;
-    let wanted = opt(args, "--source")?;
-    let device = opt(args, "--device")?;
+    check_args(args, &["--source", "--device", "--latency"], &[])?;
     let latency_ms: f64 = match opt(args, "--latency")? {
         Some(v) => v
             .parse()
             .ok()
-            .filter(|v: &f64| (1.0..=200.0).contains(v))
-            .ok_or("--latency attend un nombre de ms entre 1 et 200")?,
+            .filter(|v: &f64| {
+                (EngineSettings::MIN_LATENCY_MS..=EngineSettings::MAX_LATENCY_MS).contains(v)
+            })
+            .ok_or("--latency attend un nombre de ms entre 3 et 200")?,
         None => 10.0,
     };
-
-    let region = open_region()?;
-    region.app_announce();
-
-    let (mixer, mut control) = mixer();
-    let (_stream, info) = output::start(device, mixer)?;
-    println!("Sortie : {info}");
+    let settings = EngineSettings {
+        device: opt(args, "--device")?.map(str::to_owned),
+        latency_ms,
+        solo: opt(args, "--source")?.map(str::to_owned),
+        ..EngineSettings::default()
+    };
+    let engine = Engine::start(settings)?;
     println!("Marge visée : {latency_ms} ms. Ctrl+C pour quitter.\n");
 
-    let mut current: Option<Current> = None;
-    let mut waiting_msg_shown = false;
-    let mut last_report = Instant::now();
-    let mut last = (0u64, 0u64);
-
+    let mut last_output = String::new();
+    let mut waiting_shown = false;
     loop {
-        region.app_heartbeat(current.is_some());
-        registry::reap_dead(&region);
-        let sources = registry::active_sources(&region);
-        let chosen = pick_source(&sources, wanted);
-
-        // Le callback a rendu des lecteurs (slot libéré ou reconfiguré) ?
-        for key in control.collect_garbage() {
-            if current.as_ref().is_some_and(|c| c.key == key) {
-                current = None;
-            }
+        std::thread::sleep(Duration::from_secs(1));
+        let v = engine.view();
+        let output = match (&v.output, &v.output_error) {
+            (Some(o), Some(e)) => format!("Sortie : {o} ({e})"),
+            (Some(o), None) => format!("Sortie : {o}"),
+            (None, Some(e)) => format!("Sortie indisponible : {e}"),
+            (None, None) => String::new(),
+        };
+        if !output.is_empty() && output != last_output {
+            println!("{output}");
+            last_output = output;
         }
-
-        let chosen_key = chosen.map(|m| SourceKey {
-            index: m.index,
-            generation: m.generation,
-        });
-        if current.as_ref().map(|c| c.key) != chosen_key {
-            if let Some(c) = current.take() {
-                send(&mut control, Command::Remove(c.key));
-                println!("■ Source « {} » arrêtée.", c.name);
+        let playing: Vec<_> = v.sources.iter().filter(|s| s.enabled).collect();
+        if playing.is_empty() {
+            if !waiting_shown {
+                println!("… En attente d'une source (plugin Dawsend dans le DAW).");
+                waiting_shown = true;
             }
-            if let Some(m) = chosen {
-                let player = SourcePlayer::new(
-                    Consumer::new(region.clone(), m),
-                    info.sample_rate,
-                    latency_ms,
-                );
-                let c = Current {
-                    key: player.key(),
-                    name: m.name.clone(),
-                    stats: player.stats(),
-                    source_rate: player.source_rate(),
-                };
-                let effective_ms = player.effective_latency_ms();
-                let anti_alias = player.has_anti_alias();
-                send(&mut control, Command::Add(Box::new(player)));
-                println!(
-                    "▶ Lecture de « {} » ({} Hz, {} canal(aux)) → {} Hz{}",
-                    c.name,
-                    c.source_rate,
-                    m.channels,
-                    info.sample_rate,
-                    if anti_alias {
-                        " (filtre anti-repliement actif)"
-                    } else {
-                        ""
-                    }
-                );
-                if effective_ms + 0.05 < latency_ms {
-                    println!(
-                        "  Marge réduite à {effective_ms:.1} ms pour tenir dans le buffer à cette fréquence."
-                    );
-                }
-                current = Some(c);
-                waiting_msg_shown = false;
-                last = (0, 0);
-            } else if !waiting_msg_shown {
-                match wanted {
-                    Some(w) => println!("… En attente de la source « {w} »."),
-                    None => println!("… En attente d'une source (plugin Dawsend dans le DAW)."),
-                }
-                waiting_msg_shown = true;
-            }
+            continue;
         }
-
-        if let Some(c) = &current {
-            registry::mark_consumer(&region, c.key.index, CONSUMER_FLAG_LISTENING);
-            if last_report.elapsed() >= Duration::from_secs(1) {
-                last_report = Instant::now();
-                let s = &c.stats;
-                let under = s.underruns.load(Ordering::Relaxed);
-                let over = s.overruns.load(Ordering::Relaxed);
-                let fill_ms = s.fill_frames.load(Ordering::Relaxed) as f64 * 1000.0
-                    / f64::from(c.source_rate);
-                let state = if s.playing.load(Ordering::Relaxed) == 1 {
-                    "lecture"
+        waiting_shown = false;
+        for s in playing {
+            let state = match (s.active, s.playing) {
+                (false, _) => "en pause",
+                (true, true) => "lecture",
+                (true, false) => "amorçage",
+            };
+            println!(
+                "  [{}] {state:<9} buffer {:5.1}/{:4.1} ms  dérive {:+6.0} ppm  underruns {}  resynchros {}{}",
+                s.name,
+                s.fill_ms,
+                s.target_ms,
+                s.correction_ppm,
+                s.underruns,
+                s.resyncs,
+                if s.anti_alias {
+                    "  (anti-repliement)"
                 } else {
-                    "attente de données"
-                };
-                let mut line = format!(
-                    "  [{}] {state:<18} buffer {fill_ms:5.1} ms   underruns {under}   resynchros {over}",
-                    c.name
-                );
-                if (under, over) != last && last != (0, 0) {
-                    line.push_str("   ⚠");
+                    ""
                 }
-                last = (under, over);
-                println!("{line}");
-            }
+            );
         }
-
-        std::thread::sleep(Duration::from_millis(100));
     }
 }
 
-fn send(control: &mut MixerControl, mut cmd: Command) {
-    // La file contient 64 places et le callback la vide à chaque période :
-    // si elle est pleine, on patiente un instant.
-    for _ in 0..50 {
-        match control.send(cmd) {
-            Ok(()) => return,
-            Err(c) => {
-                cmd = c;
-                std::thread::sleep(Duration::from_millis(10));
-            }
-        }
-    }
-    eprintln!("[console] la sortie audio ne répond plus (commande ignorée)");
-}
-
-/// Simule un plugin : publie un bip de 440 Hz en temps réel.
+/// Simule un plugin : publie un bip en temps réel.
 fn sine(args: &[String]) -> Result<(), String> {
-    check_args(args, &["--name", "--rate"])?;
+    check_args(
+        args,
+        &["--name", "--rate", "--freq", "--ppm", "--block", "--spike"],
+        &["--steady", "--catch-up"],
+    )?;
     let name = opt(args, "--name")?.unwrap_or("Test 440 Hz");
-    let rate: u32 = match opt(args, "--rate")? {
-        Some(v) => v.parse().map_err(|_| "--rate attend une fréquence en Hz")?,
-        None => 48_000,
+    let num = |flag: &str, default: f64| -> Result<f64, String> {
+        match opt(args, flag)? {
+            Some(v) => v.parse().map_err(|_| format!("{flag} attend un nombre")),
+            None => Ok(default),
+        }
     };
+    let rate = num("--rate", 48_000.0)? as u32;
+    let freq = num("--freq", 440.0)?;
+    let ppm = num("--ppm", 0.0)?;
+    let block = (num("--block", 128.0)? as usize).clamp(16, 8192);
+    let steady = args.iter().any(|a| a == "--steady");
+    // Pic simulé du DAW toutes les 5 s : blocage de `spike` ms, puis blocs perdus (comme
+    // un décrochage ASIO) ou rattrapés d'un coup (`--catch-up`).
+    let spike = Duration::from_secs_f64(num("--spike", 0.0)?.clamp(0.0, 2000.0) / 1000.0);
+    let catch_up = args.iter().any(|a| a == "--catch-up");
+    let mut next_spike = Instant::now() + Duration::from_secs(5);
+    let mut lost = Duration::ZERO;
     let region = open_region()?;
     let claim = SlotClaim::claim(region.clone(), rate, 2, name).map_err(|e| e.to_string())?;
     let producer = claim.producer();
     println!(
-        "Source de test « {name} » publiée ({rate} Hz, emplacement {}). Ctrl+C pour arrêter.",
+        "Source de test « {name} » publiée ({rate} Hz, {freq} Hz, blocs de {block}, horloge {ppm:+} ppm, emplacement {}). Ctrl+C pour arrêter.",
         claim.index() + 1
     );
 
-    const BLOCK: usize = 128;
-    let block_dur = Duration::from_secs_f64(BLOCK as f64 / f64::from(rate));
+    // Horloge simulée du DAW : `rate × (1 + ppm)` trames par seconde réelle.
+    let real_rate = f64::from(rate) * (1.0 + ppm * 1e-6);
     let mut phase = 0.0f64;
-    let inc = 440.0 * std::f64::consts::TAU / f64::from(rate);
-    let mut l = vec![0.0f32; BLOCK];
-    let mut r = vec![0.0f32; BLOCK];
+    let inc = freq * std::f64::consts::TAU / f64::from(rate);
+    let mut l = vec![0.0f32; block];
+    let mut r = vec![0.0f32; block];
     let start = Instant::now();
     let mut blocks: u64 = 0;
     let mut last_status = None;
     loop {
-        for i in 0..BLOCK {
-            // 0,5 s de bip, 0,5 s de silence.
-            let on = (blocks * BLOCK as u64 + i as u64) % u64::from(rate) < u64::from(rate) / 2;
+        for i in 0..block {
+            let pos = blocks * block as u64 + i as u64;
+            let on = steady || pos % u64::from(rate) < u64::from(rate) / 2;
             let v = if on { (phase.sin() * 0.25) as f32 } else { 0.0 };
             l[i] = v;
             r[i] = v;
@@ -338,8 +304,16 @@ fn sine(args: &[String]) -> Result<(), String> {
             println!("  état : {txt}");
             last_status = Some(status);
         }
+        if !spike.is_zero() && Instant::now() >= next_spike {
+            next_spike += Duration::from_secs(5);
+            std::thread::sleep(spike);
+            if !catch_up {
+                lost += spike;
+            }
+        }
         // Cadence régulière, sans dérive cumulée.
-        let due = start + block_dur * blocks as u32;
+        let due =
+            start + lost + Duration::from_secs_f64((blocks * block as u64) as f64 / real_rate);
         if let Some(wait) = due.checked_duration_since(Instant::now()) {
             std::thread::sleep(wait);
         }

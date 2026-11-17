@@ -7,7 +7,7 @@
 
 mod cpal_backend;
 
-pub use cpal_backend::{OutputInfo, OutputStream, list_devices, start};
+pub use cpal_backend::{OutputInfo, OutputStream, default_device_name, list_devices, start};
 
 /// Ce que le backend appelle à chaque période : remplir `out` en stéréo entrelacée.
 pub trait Renderer: Send + 'static {

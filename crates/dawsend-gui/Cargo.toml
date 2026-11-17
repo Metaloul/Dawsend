@@ -1,0 +1,36 @@
+[package]
+name = "dawsend-gui"
+description = "Appli Dawsend : fenêtre et icône de la zone de notification"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[[bin]]
+name = "dawsend"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.6", features = [] }
+
+[dependencies]
+dawsend-app = { path = "../dawsend-app" }
+tauri = { version = "2.11", features = ["tray-icon", "image-png"] }
+tauri-plugin-single-instance = "2.4"
+tauri-plugin-autostart = "2.5"
+tauri-plugin-log = "2.9"
+tauri-plugin-opener = "2.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"
+sys-locale = "0.3"
+tauri-plugin-updater = "2"
+
+[features]
+# Interface intégrée au binaire (ui/dist). Pour développer avec le serveur Vite
+# (`pnpm --dir ui dev`) : `cargo run -p dawsend-gui --no-default-features`.
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

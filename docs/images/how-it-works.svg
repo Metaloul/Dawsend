@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 790" width="1200" height="790" role="img" aria-labelledby="t d">
+  <title id="t">How Dawsend works</title>
+  <desc id="d">The Dawsend plugin, inserted in the DAW, passes the audio through and copies it into a local shared memory. The Dawsend app reads it, aligns the clocks, mixes the sources and plays them on a Windows output that Discord, OBS or a screen share can hear. Updates come from GitHub releases, signed and verified.</desc>
+  <defs>
+    <style>
+      text { font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; }
+      .h1 { font-size: 26px; font-weight: 700; fill: #F3EFE8; }
+      .lead { font-size: 15px; fill: #9A9FAA; }
+      .caps { font-size: 12px; font-weight: 600; letter-spacing: 1.6px; fill: #FF7A2F; }
+      .sub { font-size: 13px; fill: #9A9FAA; }
+      .small { font-size: 12px; fill: #9A9FAA; }
+      .b { font-size: 14px; font-weight: 600; fill: #F3EFE8; }
+      .t { font-size: 14px; fill: #F3EFE8; }
+      .amb { font-size: 14px; font-weight: 600; fill: #FF7A2F; }
+      .num { font-size: 13px; font-weight: 700; fill: #FF7A2F; }
+      .mono { font-family: Consolas, "Cascadia Mono", Menlo, monospace; font-size: 12px; fill: #9A9FAA; }
+      .panel { fill: #181B20; stroke: #262A31; stroke-width: 1; }
+      .well { fill: #0C0E11; stroke: #262A31; stroke-width: 1; }
+      .ctrl { fill: #2A2E36; }
+      .flow { fill: none; stroke: #FF7A2F; stroke-width: 2.5; stroke-linecap: round; }
+      .link { fill: none; stroke: #6B7280; stroke-width: 2; stroke-linecap: round; }
+    </style>
+    <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#FF7A2F"/>
+    </marker>
+    <marker id="g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#6B7280"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="790" rx="20" fill="#121418"/>
+
+  <text class="h1" x="40" y="58">How Dawsend works</text>
+  <text class="lead" x="40" y="84">From your DAW in ASIO to your screen share, without virtual cables, VoiceMeeter or OBS.</text>
+
+  <!-- 1. DAW -->
+  <rect class="panel" x="40" y="110" width="330" height="440" rx="14"/>
+  <text class="caps" x="60" y="140">1 · YOUR DAW</text>
+  <text class="sub" x="60" y="161">Studio One, Reaper, Cubase… · ASIO driver</text>
+
+  <rect class="well" x="60" y="182" width="290" height="122" rx="10"/>
+  <text class="b" x="76" y="208">Track “Guitar”</text>
+  <rect class="ctrl" x="76" y="224" width="112" height="38" rx="7"/>
+  <text class="t" x="132" y="248" text-anchor="middle">Amp, effects</text>
+  <path class="link" d="M188 243 H204" marker-end="url(#g)"/>
+  <rect x="210" y="224" width="124" height="38" rx="7" fill="#241A14" stroke="#FF7A2F" stroke-width="1.5"/>
+  <text class="amb" x="272" y="248" text-anchor="middle">Dawsend</text>
+  <text class="small" x="76" y="288">track audio unchanged ↓</text>
+
+  <rect class="well" x="60" y="318" width="290" height="122" rx="10"/>
+  <text class="b" x="76" y="344">Track “Vocals”</text>
+  <rect class="ctrl" x="76" y="360" width="112" height="38" rx="7"/>
+  <text class="t" x="132" y="384" text-anchor="middle">Mic, EQ</text>
+  <path class="link" d="M188 379 H204" marker-end="url(#g)"/>
+  <rect x="210" y="360" width="124" height="38" rx="7" fill="#241A14" stroke="#FF7A2F" stroke-width="1.5"/>
+  <text class="amb" x="272" y="384" text-anchor="middle">Dawsend</text>
+  <text class="small" x="76" y="424">track audio unchanged ↓</text>
+
+  <rect class="well" x="60" y="456" width="290" height="44" rx="10"/>
+  <text class="t" x="205" y="483" text-anchor="middle">ASIO interface → your headphones</text>
+  <text class="small" x="60" y="528">The plugin copies the audio, never changes it.</text>
+
+  <!-- 2. Mémoire partagée -->
+  <rect class="panel" x="430" y="110" width="300" height="440" rx="14"/>
+  <text class="caps" x="450" y="140">2 · SHARED MEMORY</text>
+  <text class="sub" x="450" y="161">Local\Dawsend.v1 · this PC only</text>
+
+  <rect class="well" x="450" y="182" width="260" height="56" rx="10"/>
+  <text class="b" x="466" y="206">Source registry</text>
+  <text class="small" x="466" y="225">name, sample rate, heartbeat</text>
+
+  <g>
+    <rect class="well" x="450" y="252" width="260" height="40" rx="8"/>
+    <text class="t" x="466" y="277">1 · Guitar</text>
+    <g fill="#FF7A2F"><rect x="590" y="265" width="8" height="14" rx="1"/><rect x="602" y="265" width="8" height="14" rx="1"/><rect x="614" y="265" width="8" height="14" rx="1"/><rect x="626" y="265" width="8" height="14" rx="1"/><rect x="638" y="265" width="8" height="14" rx="1"/><rect x="650" y="265" width="8" height="14" rx="1"/></g>
+    <g fill="#1E2228"><rect x="662" y="265" width="8" height="14" rx="1"/><rect x="674" y="265" width="8" height="14" rx="1"/><rect x="686" y="265" width="8" height="14" rx="1"/></g>
+
+    <rect class="well" x="450" y="300" width="260" height="40" rx="8"/>
+    <text class="t" x="466" y="325">2 · Vocals</text>
+    <g fill="#FF7A2F"><rect x="590" y="313" width="8" height="14" rx="1"/><rect x="602" y="313" width="8" height="14" rx="1"/><rect x="614" y="313" width="8" height="14" rx="1"/><rect x="626" y="313" width="8" height="14" rx="1"/></g>
+    <g fill="#1E2228"><rect x="638" y="313" width="8" height="14" rx="1"/><rect x="650" y="313" width="8" height="14" rx="1"/><rect x="662" y="313" width="8" height="14" rx="1"/><rect x="674" y="313" width="8" height="14" rx="1"/><rect x="686" y="313" width="8" height="14" rx="1"/></g>
+
+    <rect class="well" x="450" y="348" width="260" height="40" rx="8" stroke-dasharray="4 4"/>
+    <text class="sub" x="466" y="373">3 … 32 · free</text>
+  </g>
+
+  <text class="sub" x="450" y="430">One lock-free ring per source:</text>
+  <text class="sub" x="450" y="450">the plugin writes, the app reads,</text>
+  <text class="sub" x="450" y="470">nobody waits for anybody.</text>
+  <text class="sub" x="450" y="502">If the app is closed, the plugin</text>
+  <text class="sub" x="450" y="522">carries on as if nothing happened.</text>
+
+  <!-- plugin → mémoire -->
+  <path class="flow" d="M334 243 C390 243 400 272 444 272" marker-end="url(#a)"/>
+  <path class="flow" d="M334 379 C390 379 400 320 444 320" marker-end="url(#a)"/>
+
+  <!-- 3. Appli -->
+  <rect class="panel" x="790" y="110" width="370" height="440" rx="14"/>
+  <text class="caps" x="810" y="140">3 · DAWSEND APP</text>
+  <text class="sub" x="810" y="161">notification area · Windows clock</text>
+
+  <rect class="well" x="810" y="182" width="330" height="52" rx="10"/>
+  <circle class="ctrl" cx="834" cy="208" r="13"/><text class="num" x="834" y="213" text-anchor="middle">1</text>
+  <text class="b" x="858" y="203">Read and validate</text>
+  <text class="small" x="858" y="222">every value is checked before use</text>
+
+  <rect class="well" x="810" y="246" width="330" height="52" rx="10"/>
+  <circle class="ctrl" cx="834" cy="272" r="13"/><text class="num" x="834" y="277" text-anchor="middle">2</text>
+  <text class="b" x="858" y="267">Align the clocks</text>
+  <text class="small" x="858" y="286">resampling + PI controller (drift)</text>
+
+  <rect class="well" x="810" y="310" width="330" height="52" rx="10"/>
+  <circle class="ctrl" cx="834" cy="336" r="13"/><text class="num" x="834" y="341" text-anchor="middle">3</text>
+  <text class="b" x="858" y="331">Mix the sources</text>
+  <text class="small" x="858" y="350">on/off, mute and volume per track</text>
+
+  <rect class="well" x="810" y="374" width="330" height="52" rx="10"/>
+  <circle class="ctrl" cx="834" cy="400" r="13"/><text class="num" x="834" y="405" text-anchor="middle">4</text>
+  <text class="b" x="858" y="395">Master volume + limiter</text>
+  <text class="small" x="858" y="414">no clipping for your audience</text>
+
+  <rect x="810" y="446" width="330" height="56" rx="10" fill="#0C0E11" stroke="#3DD68C" stroke-width="1.5"/>
+  <text class="b" x="975" y="470" text-anchor="middle">Windows output (WASAPI)</text>
+  <text class="small" x="975" y="489" text-anchor="middle">the one you pick in the settings</text>
+  <text class="small" x="810" y="530">latency ≈ 23 ms</text>
+  <text class="small" x="1140" y="530" text-anchor="end">adjustable in the app</text>
+
+  <!-- mémoire → appli, étapes -->
+  <path class="flow" d="M716 272 C760 272 770 208 804 208" marker-end="url(#a)"/>
+  <path class="flow" d="M716 320 C760 320 770 220 804 214" marker-end="url(#a)" opacity="0.55"/>
+  <path class="link" d="M975 234 V244" />
+  <path class="link" d="M975 298 V308" />
+  <path class="link" d="M975 362 V372" />
+  <path class="flow" d="M975 426 V440" marker-end="url(#a)"/>
+
+  <!-- Sortie → Discord -->
+  <path class="flow" d="M975 502 V574" marker-end="url(#a)"/>
+  <rect x="790" y="580" width="370" height="66" rx="12" fill="#181B20" stroke="#3DD68C" stroke-width="1.5"/>
+  <text class="b" x="975" y="607" text-anchor="middle">Discord · OBS · screen share</text>
+  <text class="small" x="975" y="628" text-anchor="middle">hear the output like any other Windows sound</text>
+
+  <!-- Retour d'état -->
+  <rect class="panel" x="40" y="580" width="690" height="66" rx="12"/>
+  <path class="link" d="M70 604 h26" marker-end="url(#g)" transform="rotate(180 83 604)"/>
+  <text class="t" x="108" y="607">The other way round, the app writes its status into the shared memory:</text>
+  <text class="sub" x="108" y="628">the plugin's light tells you whether the app is running and your track is played.</text>
+
+  <!-- Mises à jour -->
+  <rect class="panel" x="40" y="672" width="1120" height="96" rx="14"/>
+  <text class="caps" x="60" y="700">UPDATES</text>
+  <text class="small" x="170" y="700">Dawsend's only network connection, can be turned off · no open port, no telemetry</text>
+
+  <rect class="well" x="60" y="716" width="230" height="36" rx="8"/>
+  <text class="t" x="175" y="739" text-anchor="middle">GitHub · Releases</text>
+  <path class="link" d="M292 734 H318" marker-end="url(#g)"/>
+  <rect class="well" x="324" y="716" width="250" height="36" rx="8"/>
+  <text class="t" x="449" y="739" text-anchor="middle">latest.json, every 6 h</text>
+  <path class="link" d="M576 734 H602" marker-end="url(#g)"/>
+  <rect class="well" x="608" y="716" width="260" height="36" rx="8"/>
+  <text class="t" x="738" y="739" text-anchor="middle">minisign signature verified</text>
+  <path class="link" d="M870 734 H896" marker-end="url(#g)"/>
+  <rect x="902" y="716" width="238" height="36" rx="8" fill="#0C0E11" stroke="#FF7A2F" stroke-width="1.5"/>
+  <text class="amb" x="1021" y="739" text-anchor="middle">installed when you click</text>
+</svg>

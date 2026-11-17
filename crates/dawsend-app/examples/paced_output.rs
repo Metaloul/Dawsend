@@ -23,7 +23,8 @@ fn main() {
         .next()
         .expect("aucune source : lancer `dawsend-console sine`");
     let (mut mixer, mut control) = mixer();
-    let player = SourcePlayer::new(Consumer::new(region.clone(), &meta), 48_000, 10.0);
+    let player =
+        SourcePlayer::new(Consumer::new(region.clone(), &meta), 48_000, 10.0).expect("lecteur");
     let stats = player.stats();
     assert!(control.send(Command::Add(Box::new(player))).is_ok());
 
@@ -36,7 +37,7 @@ fn main() {
         mixer.render(&mut out, PERIOD);
         peak = out.iter().fold(peak, |m, v| m.max(v.abs()));
         n += 1;
-        if n % 10 == 0 {
+        if n.is_multiple_of(10) {
             region.app_heartbeat(true);
         }
         let due = start + Duration::from_millis(10) * n;

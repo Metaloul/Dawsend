@@ -1,6 +1,6 @@
 ﻿# Construit l'installateur Windows sous Windows.
 #
-# Prérequis : Rust (MSVC), Git, NSIS 3 (https://nsis.sourceforge.io).
+# Prérequis : Rust (MSVC), Git, Node.js et pnpm, NSIS 3 (https://nsis.sourceforge.io).
 # Utilisation, depuis le dossier du projet :  powershell -ExecutionPolicy Bypass -File installer\build.ps1
 # Résultat : target\installer\Dawsend-Setup-<version>.exe
 $ErrorActionPreference = "Stop"
@@ -14,8 +14,14 @@ Write-Host "==> Compilation du plugin"
 cargo xtask bundle dawsend-plugin --release
 if ($LASTEXITCODE -ne 0) { throw "échec de la compilation du plugin" }
 
+Write-Host "==> Interface de l'appli"
+pnpm --dir ui install --frozen-lockfile
+if ($LASTEXITCODE -ne 0) { throw "échec de pnpm install" }
+pnpm --dir ui build
+if ($LASTEXITCODE -ne 0) { throw "échec de la compilation de l'interface" }
+
 Write-Host "==> Compilation de l'appli"
-cargo build --release -p dawsend-app --bin dawsend-console
+cargo build --release -p dawsend-gui -p dawsend-app --bin dawsend --bin dawsend-console
 if ($LASTEXITCODE -ne 0) { throw "échec de la compilation de l'appli" }
 
 Write-Host "==> Préparation des fichiers"
@@ -23,9 +29,12 @@ if (Test-Path $Staging) { Remove-Item -Recurse -Force $Staging }
 New-Item -ItemType Directory -Force "$Staging\Dawsend.vst3\Contents\x86_64-win", "target\installer" | Out-Null
 Copy-Item target\bundled\Dawsend.vst3\Contents\x86_64-win\Dawsend.vst3 "$Staging\Dawsend.vst3\Contents\x86_64-win\"
 Copy-Item target\bundled\Dawsend.clap $Staging
+Copy-Item target\release\dawsend.exe $Staging
 Copy-Item target\release\dawsend-console.exe $Staging
+Copy-Item crates\dawsend-gui\icons\icon.ico "$Staging\dawsend.ico"
 Copy-Item LICENSE "$Staging\LICENSE.txt"
 Copy-Item LICENSES\GPL-3.0.txt "$Staging\GPL-3.0.txt"
+Copy-Item LICENSES\OFL-1.1.txt "$Staging\OFL-1.1.txt"
 Copy-Item LICENSES\README.md "$Staging\LICENCES.txt"
 Copy-Item installer\LISEZMOI.txt "$Staging\LISEZMOI.txt"
 

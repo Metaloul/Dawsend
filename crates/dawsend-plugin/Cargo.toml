@@ -5,6 +5,7 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 publish = false
 
@@ -14,6 +15,9 @@ crate-type = ["cdylib", "lib"]
 [dependencies]
 dawsend-core.workspace = true
 nih_plug.workspace = true
+nih_plug_egui.workspace = true
+png = "0.18"
+sys-locale = "0.3"
 
 # En debug, nih-plug fait planter le plugin si `process()` alloue de la mémoire.
 # Cette vérification ne fonctionne pas avec la cible Windows mingw (compilation croisée).

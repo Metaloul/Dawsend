@@ -1,0 +1,124 @@
+# Publie une version : installateur Windows signé pour les mises à jour, latest.json
+# (lu par l'appli), sommes SHA-256 et notes tirées de CHANGELOG.md.
+#
+# Lancement : pousser un tag « vX.Y.Z » égal à la version de Cargo.toml, ou lancer le
+# workflow à la main depuis l'onglet Actions.
+#
+# Secrets du dépôt :
+#   TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD  (obligatoires)
+#   VT_API_KEY  (facultatif : analyse VirusTotal des fichiers publiés)
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      VT_API_KEY: ${{ secrets.VT_API_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Version
+        id: version
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path Cargo.toml -Pattern '^version = "(.*)"' | Select-Object -First 1).Matches[0].Groups[1].Value
+          if ($env:GITHUB_REF_TYPE -eq "tag" -and $env:GITHUB_REF_NAME -ne "v$v") {
+            throw "Le tag $env:GITHUB_REF_NAME ne correspond pas à la version $v de Cargo.toml"
+          }
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
+
+      - name: NSIS
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) { choco install nsis -y --no-progress }
+
+      - name: Tests
+        run: cargo test --workspace --locked
+
+      - name: Installateur
+        shell: pwsh
+        run: ./installer/build.ps1
+
+      - name: Signature pour les mises à jour
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $v = "${{ steps.version.outputs.version }}"
+          $exe = Resolve-Path "target/installer/Dawsend-Setup-$v.exe"
+          pnpm --dir ui tauri signer sign --app-version $v "$exe"
+          node scripts/latest-json.mjs $v "target/installer/Dawsend-Setup-$v.exe" "target/installer/Dawsend-Setup-$v.exe.sig" "$env:GITHUB_REPOSITORY"
+
+      - name: Sommes SHA-256
+        shell: pwsh
+        run: |
+          Get-ChildItem target/installer/Dawsend-Setup-*.exe, target/installer/latest.json |
+            ForEach-Object { "{0}  {1}" -f (Get-FileHash $_ -Algorithm SHA256).Hash.ToLower(), $_.Name } |
+            Set-Content -Encoding ascii target/installer/SHA256SUMS.txt
+          Get-Content target/installer/SHA256SUMS.txt
+
+      - name: Release GitHub
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = "${{ steps.version.outputs.version }}"
+          gh release create "v$v" `
+            "target/installer/Dawsend-Setup-$v.exe" `
+            "target/installer/Dawsend-Setup-$v.exe.sig" `
+            target/installer/latest.json `
+            target/installer/SHA256SUMS.txt `
+            --title "Dawsend $v" --notes-file target/installer/release-notes.md
+
+      - name: VirusTotal
+        id: virustotal
+        if: env.VT_API_KEY != ''
+        uses: crazy-max/ghaction-virustotal@v5
+        with:
+          vt_api_key: ${{ secrets.VT_API_KEY }}
+          request_rate: 4
+          files: |
+            target/installer/Dawsend-Setup-*.exe
+
+      # Ajoute le lien du rapport VirusTotal aux notes de la release (sortie
+      # « fichier=adresse » de l'action, séparée par des virgules).
+      - name: Rapport VirusTotal dans les notes
+        if: steps.virustotal.outputs.analysis != ''
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANALYSIS: ${{ steps.virustotal.outputs.analysis }}
+        run: |
+          $v = "${{ steps.version.outputs.version }}"
+          $links = $env:ANALYSIS -split ',' | ForEach-Object {
+            $name, $url = $_ -split '=', 2
+            "- [$name]($url)"
+          }
+          $body = (Get-Content target/installer/release-notes.md -Raw) + "`n### Analyse antivirus`n`n" + ($links -join "`n") + "`n"
+          Set-Content -Path target/installer/release-notes.md -Value $body -Encoding utf8
+          gh release edit "v$v" --notes-file target/installer/release-notes.md

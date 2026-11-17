@@ -1,6 +1,8 @@
 //! Backend de sortie cpal.
 
 use std::fmt;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{FromSample, SampleFormat, SizedSample};
@@ -10,7 +12,7 @@ use super::Renderer;
 /// Taille max d'un morceau rendu d'un coup (le callback est découpé au-delà).
 const CHUNK_FRAMES: usize = 2048;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct OutputInfo {
     pub device_name: String,
     pub sample_rate: u32,
@@ -31,6 +33,22 @@ impl fmt::Display for OutputInfo {
 /// Flux de sortie en cours. S'arrête au `Drop`.
 pub struct OutputStream {
     _stream: cpal::Stream,
+    failed: Arc<AtomicBool>,
+}
+
+impl OutputStream {
+    /// `true` si le flux a signalé une erreur (périphérique débranché ou changé) : il faut
+    /// le recréer.
+    pub fn failed(&self) -> bool {
+        self.failed.load(Ordering::Relaxed)
+    }
+}
+
+/// Nom du périphérique de sortie par défaut du système.
+pub fn default_device_name() -> Option<String> {
+    cpal::default_host()
+        .default_output_device()
+        .map(|d| d.to_string())
 }
 
 /// Liste les périphériques de sortie : (nom, est-ce le défaut ?).
@@ -75,12 +93,14 @@ pub fn start<R: Renderer>(
         sample_format: format!("{:?}", supported.sample_format()),
     };
 
+    let failed = Arc::new(AtomicBool::new(false));
+    let f = failed.clone();
     let stream = match supported.sample_format() {
-        SampleFormat::F32 => build::<f32, R>(&dev, &config, renderer),
-        SampleFormat::F64 => build::<f64, R>(&dev, &config, renderer),
-        SampleFormat::I16 => build::<i16, R>(&dev, &config, renderer),
-        SampleFormat::I32 => build::<i32, R>(&dev, &config, renderer),
-        SampleFormat::U16 => build::<u16, R>(&dev, &config, renderer),
+        SampleFormat::F32 => build::<f32, R>(&dev, &config, renderer, f),
+        SampleFormat::F64 => build::<f64, R>(&dev, &config, renderer, f),
+        SampleFormat::I16 => build::<i16, R>(&dev, &config, renderer, f),
+        SampleFormat::I32 => build::<i32, R>(&dev, &config, renderer, f),
+        SampleFormat::U16 => build::<u16, R>(&dev, &config, renderer, f),
         other => {
             return Err(format!(
                 "format d'échantillon non pris en charge : {other:?}"
@@ -88,13 +108,21 @@ pub fn start<R: Renderer>(
         }
     }?;
     stream.play().map_err(|e| e.to_string())?;
-    Ok((OutputStream { _stream: stream }, info))
+    log::info!("sortie ouverte : {info}");
+    Ok((
+        OutputStream {
+            _stream: stream,
+            failed,
+        },
+        info,
+    ))
 }
 
 fn build<T, R>(
     dev: &cpal::Device,
     config: &cpal::StreamConfig,
     mut renderer: R,
+    failed: Arc<AtomicBool>,
 ) -> Result<cpal::Stream, String>
 where
     T: SizedSample + FromSample<f32> + Send + 'static,
@@ -127,7 +155,18 @@ where
                 done += n;
             }
         },
-        |err| eprintln!("[sortie audio] erreur : {err}"),
+        move |err| {
+            // Appelé hors du callback de rendu : journaliser ici est permis.
+            if err.kind() == cpal::ErrorKind::RealtimeDenied {
+                // Le son continue, mais le thread de sortie reste en priorité normale :
+                // plus sensible aux pics de charge (ceux du DAW notamment).
+                log::warn!("sortie audio : priorité temps réel refusée ({err})");
+                return;
+            }
+            if !failed.swap(true, Ordering::Relaxed) {
+                log::warn!("sortie audio : erreur du flux ({err}), réouverture prévue");
+            }
+        },
         None,
     )
     .map_err(|e| e.to_string())

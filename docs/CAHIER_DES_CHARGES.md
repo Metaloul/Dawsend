@@ -58,9 +58,9 @@ Structurer le code pour que le backend audio et l'IPC soient isolés par platefo
 | Étape | État |
 |---|---|
 | 0. Architecture et format de la mémoire partagée | Validée le 16/11/2026 |
-| 1. Prototype plugin + appli console | Livrée le 16/11/2026, **à tester par Romain** ([procédure](TEST-ETAPE-1.md)) |
-| 2. Dérive d'horloge et latence | À faire |
-| 3. Plusieurs sources et mixage | À faire |
-| 4. Interface Tauri, barre des tâches, réglages | À faire |
-| 5. Empaquetage Windows | Installateur NSIS avancé dès l'étape 1 (16/11/2026), à compléter à l'étape 4 |
+| 1. Prototype plugin + appli console | Livrée le 16/11/2026, vérifiée sur le PC de Romain (sortie réelle capturée en loopback) |
+| 2. Dérive d'horloge et latence | Livrée le 16/11/2026 : rubato + régulateur PI, fondus croisés, marge adaptée aux blocs du DAW. Vérifiée sur le PC (60 s à +400 ppm simulés : 0 coupure, 0 craquement) |
+| 3. Plusieurs sources et mixage | Livrée le 16/11/2026 : volume, mute, limiteur ; interface egui du plugin (logo, voyant de liaison, renommage, vumètre), français et anglais |
+| 4. Interface Tauri, barre des tâches, réglages | Livrée le 16/11/2026 : appli `dawsend.exe` (Tauri 2 + Svelte 5), menu de la zone de notification, réglages sauvegardés, journaux, français et anglais. Refonte visuelle V2 (maquette Figma) de l'appli et du plugin le 17/11/2026. **Plugin dans Studio One à tester par Romain** ([procédure](TEST-ETAPES-2-4.md)) |
+| 5. Empaquetage Windows | Installateur NSIS de l'appli à fenêtre, testé sur le PC (installation silencieuse, démarrage réduit, démarrage avec Windows). Reste : signature du code |
 | 6. Linux, puis macOS | À faire |

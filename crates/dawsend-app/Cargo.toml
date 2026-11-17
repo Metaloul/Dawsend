@@ -5,13 +5,18 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 publish = false
 
 [dependencies]
 dawsend-core.workspace = true
-cpal = "0.18"
+cpal = { version = "0.18", features = ["realtime"] }
 rtrb = "0.4"
+rubato = { version = "5.1", default-features = false }
+audioadapter-buffers = "5"
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_System_Console"] }

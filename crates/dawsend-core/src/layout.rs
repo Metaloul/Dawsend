@@ -137,7 +137,7 @@ const _: () = {
     assert!(offset_of!(SlotHeader, consumer_flags) == 208);
 
     assert!(HEADER_SIZE + SLOT_COUNT * SLOT_HEADER_SIZE <= DATA_OFFSET);
-    assert!(DATA_OFFSET % 4096 == 0);
+    assert!(DATA_OFFSET.is_multiple_of(4096));
     assert!(RING_CAPACITY_FRAMES.is_power_of_two());
     assert!(TOTAL_SIZE == 16_789_504);
 };

@@ -1,0 +1,210 @@
+/* Palette et typographie de la maquette Figma « Dawsend — identité », page « V2 — Interface »
+   (voir assets/palette.md). Polices auto-hébergées (Fontsource, licence OFL). */
+@import "@fontsource/familjen-grotesk/400.css";
+@import "@fontsource/familjen-grotesk/500.css";
+@import "@fontsource/familjen-grotesk/600.css";
+@import "@fontsource/geist-mono/400.css";
+@import "@fontsource/geist-mono/500.css";
+
+:root {
+  /* Fond de la fenêtre, façade des panneaux, creux (vumètres, champs), commandes, filets. */
+  --ink: #121418;
+  --face: #181b20;
+  --well: #0c0e11;
+  --ctrl: #2a2e36;
+  --line: #262a31;
+  --unlit: #1e2228;
+  /* Textes. */
+  --paper: #f3efe8;
+  --muted: #9a9faa;
+  --dim: #6b7280;
+  /* Accent et états. */
+  --amber: #ff7a2f;
+  --ok: #3dd68c;
+  --warn: #f2b83b;
+  --bad: #f25555;
+
+  --sans: "Familjen Grotesk", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --mono: "Geist Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  color-scheme: dark;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--paper);
+  background: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--ink);
+}
+
+body {
+  user-select: none;
+  overflow: hidden;
+}
+
+#app {
+  height: 100%;
+}
+
+button,
+select {
+  font: inherit;
+  color: var(--paper);
+  background: var(--ctrl);
+  border: 1px solid var(--well);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+button:hover,
+select:hover {
+  border-color: color-mix(in srgb, var(--amber) 55%, transparent);
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+[role="slider"]:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+select {
+  appearance: none;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M2 3.5 5 6.5 8 3.5' stroke='%239A9FAA' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+      no-repeat right 9px center,
+    var(--well);
+  border-color: var(--line);
+  padding-right: 28px;
+  text-overflow: ellipsis;
+}
+
+option {
+  background: var(--face);
+}
+
+/* Petites capitales des étiquettes de façade. */
+.label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mono {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Curseur horizontal. */
+input[type="range"] {
+  appearance: none;
+  height: 20px;
+  background: transparent;
+  margin: 0;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--amber) 0 var(--fill, 0%),
+    var(--well) var(--fill, 0%) 100%
+  );
+}
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+}
+
+/* Interrupteur : une case à cocher habillée. */
+.switch {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  flex: none;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+.switch span {
+  position: absolute;
+  inset: 0;
+  background: var(--ctrl);
+  border-radius: 999px;
+  transition: background 120ms;
+  cursor: pointer;
+}
+.switch span::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  left: 3px;
+  top: 3px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition:
+    transform 120ms,
+    background 120ms;
+}
+.switch input:checked + span {
+  background: var(--amber);
+}
+.switch input:checked + span::after {
+  transform: translateX(14px);
+  background: var(--ink);
+}
+.switch input:focus-visible + span {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+/* Voyant. */
+.led {
+  --c: var(--dim);
+  --halo: transparent;
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--c) 0 3px, var(--halo) 3.5px);
+}
+.led.ok {
+  --c: var(--ok);
+  --halo: color-mix(in srgb, var(--ok) 25%, transparent);
+}
+.led.warn {
+  --c: var(--warn);
+  --halo: color-mix(in srgb, var(--warn) 25%, transparent);
+}
+.led.bad {
+  --c: var(--bad);
+  --halo: color-mix(in srgb, var(--bad) 25%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

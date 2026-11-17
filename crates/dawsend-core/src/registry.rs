@@ -292,6 +292,11 @@ impl SlotClaim {
         Producer::new(self.region.clone(), self.index, channels)
     }
 
+    /// `true` si l'appli lit cette source mais l'a coupée (mute). Non bloquant.
+    pub fn muted_by_app(&self) -> bool {
+        self.slot().consumer_flags.load(Ordering::Relaxed) & CONSUMER_FLAG_MUTED != 0
+    }
+
     /// État de la liaison avec l'appli. Non bloquant, utilisable partout.
     pub fn status(&self) -> LinkStatus {
         let now = clock::now_ns();
