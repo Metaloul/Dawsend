@@ -395,8 +395,9 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Working with a coding age
 ## Contributing
 
 Issues and pull requests are welcome. Before a PR: `cargo fmt`, `cargo clippy` with
-no warnings, `cargo test` and `cargo deny check` must pass (CI checks them). For a
-security issue, use [private reporting](SECURITY.md), not an issue.
+no warnings, `cargo test` and `cargo deny check` must pass (CI checks them), and new
+features come with their tests. Full requirements: [CONTRIBUTING.md](CONTRIBUTING.md)
+(in French). For a security issue, use [private reporting](SECURITY.md), not an issue.
 
 ## License
 

@@ -94,6 +94,7 @@ qu'il promet à l'utilisateur : `README.md`.
 | `fuzz/`, `.clusterfuzzlite/` | Fuzzing du lecteur de la mémoire partagée (cible `reader`, qui appelle `dawsend_core::fuzzing`, feature `fuzzing`) ; workspace à part, lancé par ClusterFuzzLite. |
 | `osv-scanner.toml` | Avis RustSec acceptés pour OSV-Scanner et Scorecard (mêmes décisions que `deny.toml`). |
 | `assets/` | Logo, wordmark, icônes, polices (OFL), palette. |
+| `CONTRIBUTING.md`, `SECURITY.md`, `docs/BADGE-OPENSSF.md` | Contribution, signalement des failles, réponses du badge OpenSSF Best Practices. |
 | `LICENSES/` | Textes GPL-3.0, OFL-1.1 et récapitulatif des licences. |
 
 ## 5. Commandes

@@ -8,7 +8,9 @@ bouton **« Report a vulnerability »** de l'onglet
 le signalement reste privé jusqu'à la correction.
 
 Indique la version de Dawsend, ton système et, si possible, les étapes pour reproduire.
-Une première réponse arrive en général sous quelques jours.
+Tu reçois une première réponse sous 14 jours au plus. Une faille confirmée est
+corrigée dans une nouvelle version, puis publiée dans un avis de sécurité GitHub et
+dans les notes de la release.
 
 ## Versions suivies
 
@@ -27,3 +29,6 @@ mise à jour.
   cargo-deny, cargo-audit, pnpm audit, OpenSSF Scorecard) : voir
   [docs/SECURITE.md](docs/SECURITE.md).
 - **Sommes SHA-256** publiées avec chaque version (`SHA256SUMS.txt`).
+- **Provenance SLSA** jointe à chaque version (`Dawsend-X.Y.Z.intoto.jsonl`) : elle
+  prouve que les fichiers sortent du workflow de release de ce dépôt.
+- **Fuzzing** du lecteur de la mémoire partagée (ClusterFuzzLite).
